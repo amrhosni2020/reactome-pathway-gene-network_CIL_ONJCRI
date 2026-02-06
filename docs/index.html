@@ -1048,6 +1048,23 @@
 
             const g = svg.append("g");
 
+            // Add glow filter for pathway highlighting
+            const defs = svg.append("defs");
+            const filter = defs.append("filter")
+                .attr("id", "pathway-glow")
+                .attr("x", "-50%")
+                .attr("y", "-50%")
+                .attr("width", "200%")
+                .attr("height", "200%");
+
+            filter.append("feGaussianBlur")
+                .attr("stdDeviation", "4")
+                .attr("result", "coloredBlur");
+
+            const feMerge = filter.append("feMerge");
+            feMerge.append("feMergeNode").attr("in", "coloredBlur");
+            feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
             // Zoom
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 4])
@@ -1214,6 +1231,34 @@
                     return (sourceId === d.id || targetId === d.id) ? 1 : 0.1;
                 });
 
+            // Add glow effect to connected pathway nodes when hovering over a gene
+            if (d.type === 'gene') {
+                d3.selectAll('.node')
+                    .style('filter', n => {
+                        if (n.type === 'pathway') {
+                            // Check if this pathway is connected to the hovered gene
+                            const isConnected = currentLinks.some(l => {
+                                const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                                const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                return (sourceId === d.id && targetId === n.id) || (targetId === d.id && sourceId === n.id);
+                            });
+                            return isConnected ? 'url(#pathway-glow)' : null;
+                        }
+                        return null;
+                    })
+                    .style('opacity', n => {
+                        if (n.type === 'pathway') {
+                            const isConnected = currentLinks.some(l => {
+                                const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                                const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                return (sourceId === d.id && targetId === n.id) || (targetId === d.id && sourceId === n.id);
+                            });
+                            return isConnected ? 1 : 0.3;
+                        }
+                        return 1; // Keep genes at full opacity
+                    });
+            }
+
             if (d.type === 'gene') {
                 const fc = geneExpression[d.label];
                 const fcDisplay = fc ? fc.toFixed(2) : 'N/A';
@@ -1269,6 +1314,10 @@
             d3.selectAll('.link')
                 .classed('highlighted', false)
                 .style('opacity', 0.3);
+            // Reset node glow and opacity
+            d3.selectAll('.node')
+                .style('filter', null)
+                .style('opacity', 1);
         }
 
         // ========== STATS & LEGEND ==========

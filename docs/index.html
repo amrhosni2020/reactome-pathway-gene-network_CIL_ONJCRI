@@ -1019,10 +1019,10 @@
 
             if (fc === undefined || fc === null) return 15;  // Default size if no expression data
 
-            // Scale: 15-35px based on fold change (0-3)
+            // Scale: 15-35px based on fold change (0-4)
             const minRadius = 15;
             const maxRadius = 35;
-            const maxFC = 3;  // Cap at FC=3 for visualization
+            const maxFC = 4;  // Cap at FC=4 for visualization
 
             const absFC = Math.abs(fc);
             const scaledFC = Math.min(absFC, maxFC);
@@ -1282,7 +1282,7 @@
             svg.selectAll('*').remove();
 
             // Pathway size legend - circles with centered text
-            const pathwaySamples = [1, 4, 9, 16];
+            const pathwaySamples = [1, 4, 9, 16, 20];
             const g1 = svg.append('g').attr('transform', 'translate(10, 40)');
 
             g1.append('text')
@@ -1324,7 +1324,7 @@
             });
 
             // Gene size legend (fold change) - horizontally aligned
-            const geneSamples = [0, 1, 2, 3];
+            const geneSamples = [0, 1, 2, 3, 4];
             const g2 = svg.append('g').attr('transform', 'translate(10, 120)');
 
             g2.append('text')
@@ -1338,7 +1338,7 @@
             geneSamples.forEach((fc, i) => {
                 const minR = 15;
                 const maxR = 35;
-                const r = minR + (fc / 3) * (maxR - minR);
+                const r = minR + (fc / 4) * (maxR - minR);
                 // Scale down for legend display but maintain relative differences
                 const scaleFactor = 0.6;
                 const displayR = r * scaleFactor;
@@ -1361,7 +1361,7 @@
 
                 // Move to next position: current radius + gap + next radius (estimated)
                 const nextFc = geneSamples[i + 1] !== undefined ? geneSamples[i + 1] : fc;
-                const nextR = (minR + (nextFc / 3) * (maxR - minR)) * scaleFactor;
+                const nextR = (minR + (nextFc / 4) * (maxR - minR)) * scaleFactor;
                 xPos += displayR + nextR + 8;
             });
 

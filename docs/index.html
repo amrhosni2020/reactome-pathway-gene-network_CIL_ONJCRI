@@ -417,6 +417,7 @@
                 <p style="font-size: 14px; color: #7f8c8d; margin-top: 4px;">Allam et al.</p>
             </div>
             <div class="export-buttons">
+                <button class="reset-btn" onclick="clearSelection()">✖️ Clear Selection</button>
                 <button class="reset-btn" onclick="resetLayout()">🔄 Reset Layout</button>
                 <button class="export-btn" onclick="exportToPNG()">📥 Download PNG</button>
             </div>
@@ -599,6 +600,7 @@
         let currentLinks = [];
         let simulation = null;
         let manualPositions = {};
+        let selectedGenes = new Set(); // Track clicked/selected genes
 
         // Top-level pathways to exclude in Clean mode
         const TOP_LEVEL_EXCLUDE = [
@@ -1138,10 +1140,13 @@
                 .attr("class", d => `node ${d.type}`)
                 .attr("r", d => d.type === 'pathway' ? getPathwayRadius(d) : getGeneRadius(d))
                 .attr("fill", d => getPathwayColor(d))
+                .attr("stroke", d => selectedGenes.has(d.id) ? '#FFD700' : 'none') // Gold stroke for selected
+                .attr("stroke-width", d => selectedGenes.has(d.id) ? 3 : 0)
                 .call(d3.drag()
                     .on("start", dragStarted)
                     .on("drag", dragged)
                     .on("end", dragEnded))
+                .on("click", handleNodeClick)
                 .on("mouseover", showTooltip)
                 .on("mousemove", moveTooltip)
                 .on("mouseout", hideTooltip);
@@ -1196,6 +1201,89 @@
             drawSizeLegend();
         }
 
+        // ========== CLICK HANDLER FOR SELECTION ==========
+        function handleNodeClick(event, d) {
+            // Only allow selection of genes
+            if (d.type !== 'gene') return;
+
+            event.stopPropagation();
+
+            // Toggle selection
+            if (selectedGenes.has(d.id)) {
+                selectedGenes.delete(d.id);
+            } else {
+                selectedGenes.add(d.id);
+            }
+
+            // Update visual feedback
+            updateSelectionVisuals();
+        }
+
+        function updateSelectionVisuals() {
+            // Update node strokes to show selection
+            d3.selectAll('.node')
+                .attr("stroke", d => selectedGenes.has(d.id) ? '#FFD700' : 'none')
+                .attr("stroke-width", d => selectedGenes.has(d.id) ? 3 : 0);
+
+            // Apply persistent glow to pathways connected to selected genes
+            if (selectedGenes.size > 0) {
+                d3.selectAll('.node')
+                    .style('filter', n => {
+                        if (n.type === 'pathway') {
+                            // Check if this pathway is connected to ANY selected gene
+                            const isConnected = Array.from(selectedGenes).some(geneId => {
+                                return currentLinks.some(l => {
+                                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                    return (sourceId === geneId && targetId === n.id) || (targetId === geneId && sourceId === n.id);
+                                });
+                            });
+                            return isConnected ? 'url(#pathway-glow)' : null;
+                        }
+                        return null;
+                    })
+                    .style('opacity', n => {
+                        if (n.type === 'pathway') {
+                            const isConnected = Array.from(selectedGenes).some(geneId => {
+                                return currentLinks.some(l => {
+                                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                    return (sourceId === geneId && targetId === n.id) || (targetId === geneId && sourceId === n.id);
+                                });
+                            });
+                            return isConnected ? 1 : 0.3;
+                        }
+                        return 1;
+                    });
+
+                // Highlight links connected to selected genes
+                d3.selectAll('.link')
+                    .classed('highlighted', l => {
+                        const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                        return selectedGenes.has(sourceId) || selectedGenes.has(targetId);
+                    })
+                    .style('opacity', l => {
+                        const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                        return (selectedGenes.has(sourceId) || selectedGenes.has(targetId)) ? 1 : 0.1;
+                    });
+            } else {
+                // Reset everything when no selection
+                d3.selectAll('.node')
+                    .style('filter', null)
+                    .style('opacity', 1);
+                d3.selectAll('.link')
+                    .classed('highlighted', false)
+                    .style('opacity', 0.3);
+            }
+        }
+
+        function clearSelection() {
+            selectedGenes.clear();
+            updateSelectionVisuals();
+        }
+
         // ========== DRAG HANDLERS ==========
         function dragStarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -1218,45 +1306,50 @@
             const tooltip = document.getElementById('tooltip');
             let content = '';
 
-            // Highlight connected links
-            d3.selectAll('.link')
-                .classed('highlighted', l => {
-                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
-                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
-                    return sourceId === d.id || targetId === d.id;
-                })
-                .style('opacity', l => {
-                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
-                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
-                    return (sourceId === d.id || targetId === d.id) ? 1 : 0.1;
-                });
-
-            // Add glow effect to connected pathway nodes when hovering over a gene
-            if (d.type === 'gene') {
-                d3.selectAll('.node')
-                    .style('filter', n => {
-                        if (n.type === 'pathway') {
-                            // Check if this pathway is connected to the hovered gene
-                            const isConnected = currentLinks.some(l => {
-                                const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
-                                const targetId = typeof l.target === 'string' ? l.target : l.target.id;
-                                return (sourceId === d.id && targetId === n.id) || (targetId === d.id && sourceId === n.id);
-                            });
-                            return isConnected ? 'url(#pathway-glow)' : null;
-                        }
-                        return null;
+            // Only apply hover effects if no genes are selected
+            // This allows hover to work normally when nothing is selected
+            // but prevents interference when genes are actively selected
+            if (selectedGenes.size === 0) {
+                // Highlight connected links
+                d3.selectAll('.link')
+                    .classed('highlighted', l => {
+                        const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                        return sourceId === d.id || targetId === d.id;
                     })
-                    .style('opacity', n => {
-                        if (n.type === 'pathway') {
-                            const isConnected = currentLinks.some(l => {
-                                const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
-                                const targetId = typeof l.target === 'string' ? l.target : l.target.id;
-                                return (sourceId === d.id && targetId === n.id) || (targetId === d.id && sourceId === n.id);
-                            });
-                            return isConnected ? 1 : 0.3;
-                        }
-                        return 1; // Keep genes at full opacity
+                    .style('opacity', l => {
+                        const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                        return (sourceId === d.id || targetId === d.id) ? 1 : 0.1;
                     });
+
+                // Add glow effect to connected pathway nodes when hovering over a gene
+                if (d.type === 'gene') {
+                    d3.selectAll('.node')
+                        .style('filter', n => {
+                            if (n.type === 'pathway') {
+                                // Check if this pathway is connected to the hovered gene
+                                const isConnected = currentLinks.some(l => {
+                                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                    return (sourceId === d.id && targetId === n.id) || (targetId === d.id && sourceId === n.id);
+                                });
+                                return isConnected ? 'url(#pathway-glow)' : null;
+                            }
+                            return null;
+                        })
+                        .style('opacity', n => {
+                            if (n.type === 'pathway') {
+                                const isConnected = currentLinks.some(l => {
+                                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                                    return (sourceId === d.id && targetId === n.id) || (targetId === d.id && sourceId === n.id);
+                                });
+                                return isConnected ? 1 : 0.3;
+                            }
+                            return 1; // Keep genes at full opacity
+                        });
+                }
             }
 
             if (d.type === 'gene') {
@@ -1310,14 +1403,19 @@
 
         function hideTooltip() {
             document.getElementById('tooltip').style.display = 'none';
-            // Reset link highlighting
-            d3.selectAll('.link')
-                .classed('highlighted', false)
-                .style('opacity', 0.3);
-            // Reset node glow and opacity
-            d3.selectAll('.node')
-                .style('filter', null)
-                .style('opacity', 1);
+
+            // Only reset if no genes are selected
+            // If genes are selected, maintain the selection visuals
+            if (selectedGenes.size === 0) {
+                // Reset link highlighting
+                d3.selectAll('.link')
+                    .classed('highlighted', false)
+                    .style('opacity', 0.3);
+                // Reset node glow and opacity
+                d3.selectAll('.node')
+                    .style('filter', null)
+                    .style('opacity', 1);
+            }
         }
 
         // ========== STATS & LEGEND ==========

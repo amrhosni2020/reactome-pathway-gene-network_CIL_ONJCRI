@@ -5,6 +5,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Amr H. Allam">
+    <meta name="description"
+        content="Interactive bipartite network visualization of IL-6/STAT3 key genes and their associated Reactome pathways. Created by Amr H. Allam, ONJCRI.">
     <title>Reactome Pathway-Gene Network Explorer</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
@@ -552,6 +555,33 @@
         </div>
 
         <div class="tooltip" id="tooltip"></div>
+
+        <!-- Footer with Attribution -->
+        <div class="footer"
+            style="text-align: center; padding: 20px; background: white; margin-top: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="margin-bottom: 12px;">
+                <strong style="font-size: 14px; color: #2c3e50;">Created by Amr H. Allam, DVM, MRes, PhD</strong>
+            </div>
+            <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">
+                Olivia Newton-John Cancer Research Institute (ONJCRI), Melbourne, Australia
+            </div>
+            <div style="font-size: 12px; margin-bottom: 10px;">
+                <span style="color: #95a5a6;">📧</span> <a href="mailto:Amr.Allam@onjcri.org.au"
+                    style="color: #667eea; text-decoration: none;">Amr.Allam@onjcri.org.au</a>
+                <span style="margin: 0 8px; color: #bdc3c7;">•</span>
+                <span style="color: #95a5a6;">💼</span> <a href="https://linkedin.com/in/amrallam2016" target="_blank"
+                    style="color: #667eea; text-decoration: none;">LinkedIn</a>
+            </div>
+            <div
+                style="font-size: 11px; color: #95a5a6; margin-top: 12px; padding-top: 12px; border-top: 1px solid #ecf0f1;">
+                If you use this resource, please cite the repository (<a
+                    href="https://github.com/amrhosni2020/reactome-pathway-gene-network_CIL_ONJCRI" target="_blank"
+                    style="color: #667eea; text-decoration: none;">see README / CITATION.cff</a>)
+            </div>
+            <div style="font-size: 10px; color: #bdc3c7; margin-top: 8px;">
+                Version: v0.1.0 (2026-02-06)
+            </div>
+        </div>
     </div>
 
     <script>

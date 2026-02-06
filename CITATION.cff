@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: "Reactome Pathway–Gene Network Explorer"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - family-names: "Allam"
+    given-names: "Amr H."
+    email: Amr.Allam@onjcri.org.au
+    affiliation: "Olivia Newton-John Cancer Research Institute (ONJCRI)"
+    city: Melbourne
+    country: AU
+repository-code: "https://github.com/amrhosni2020/reactome-pathway-gene-network_CIL_ONJCRI"
+url: "https://amrhosni2020.github.io/reactome-pathway-gene-network_CIL_ONJCRI/"
+abstract: "An interactive bipartite network visualization showing the relationships between IL-6/STAT3 key genes and their associated Reactome pathways. This tool enables exploration of pathway-gene connectivity with dynamic filtering, color-coded categories, and fold-change visualization."
+keywords:
+  - reactome
+  - pathway analysis
+  - gene network
+  - bioinformatics
+  - visualization
+  - IL-6
+  - STAT3
+license: MIT
+date-released: "2026-02-06"
+version: "0.1.0"

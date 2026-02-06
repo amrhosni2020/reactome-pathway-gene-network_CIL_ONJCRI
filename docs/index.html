@@ -439,8 +439,15 @@
                         <input type="file" id="keyGenesFile" accept=".csv" onchange="loadCustomKeyGenes()">
                     </div>
                     <div style="font-size: 11px; color: #666; margin-top: 8px; line-height: 1.4;">
-                        💡 <strong>Tip:</strong> Reactome pathways load automatically. Upload a custom Key_genes.csv to
-                        filter to different genes.
+                        <strong>Description:</strong> This tool visualizes a macrophage-centred, cross-species IL‑6
+                        trans‑signalling program by connecting macrophage/TAM genes from our mouse CRC liver metastasis
+                        experiments to Reactome pathways. Genes are derived specifically from macrophage differential
+                        expression comparing WT versus selective IL‑6 trans‑signalling blockade (sgp130/sgp130Fc),
+                        capturing transcripts that decrease when macrophage trans‑signalling is inhibited (consistent
+                        with an IL‑6 trans‑signalling–supported macrophage state in vivo). We then overlay the
+                        corresponding human contrast (CRC liver metastasis vs normal liver) to prioritize
+                        macrophage-linked candidates showing inverse regulation across species (mouse macrophage
+                        trans‑signalling blockade ↓, human metastasis ↑).
                     </div>
                 </div>
             </div>
@@ -1360,7 +1367,6 @@
                     <div class="tooltip-title">🧬 ${d.label}</div>
                     <div class="tooltip-content">
                         <div class="tooltip-row"><span class="tooltip-label">Fold Change (|FC|):</span> ${fcDisplay}</div>
-                        <div class="tooltip-row"><span class="tooltip-label">Direction:</span> ${d.direction || 'N/A'}</div>
                         <div class="tooltip-row"><span class="tooltip-label">IL6R:</span> ${d.il6r || 'N/A'}</div>
                         <div class="tooltip-row"><span class="tooltip-label">Human Cohorts:</span> ${d.human || 'N/A'}</div>
                         <div class="tooltip-row"><span class="tooltip-label">Mouse Gene:</span> ${d.mouseGene || 'N/A'}</div>

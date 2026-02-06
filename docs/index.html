@@ -1259,6 +1259,9 @@
                                 });
                             });
                             return isConnected ? 1 : 0.3;
+                        } else if (n.type === 'gene') {
+                            // Fade unselected genes
+                            return selectedGenes.has(n.id) ? 1 : 0.3;
                         }
                         return 1;
                     });

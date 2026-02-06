@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<!-- Reactome Pathway-Gene Network with Category Support -->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactome Pathway-Gene Network Explorer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .header-content {
+            flex: 1;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        h1 span {
+            color: #667eea;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-btn,
+        .reset-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .reset-btn {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .export-btn:hover,
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .control-section h3 {
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-input-row label {
+            font-size: 12px;
+            color: #666;
+            min-width: 100px;
+        }
+
+        .file-input-row input[type="file"] {
+            font-size: 12px;
+        }
+
+        .filter-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-item label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-item select,
+        .filter-item input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .filter-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-row span {
+            font-size: 12px;
+            color: #333;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            background: #5a6fd6;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 6px;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-circle {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        /* Network container */
+        .network-container {
+            width: 100%;
+            height: 700px;
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            stroke: white;
+            stroke-width: 2px;
+            cursor: grab;
+            transition: all 0.3s ease;
+        }
+
+        .node:active {
+            cursor: grabbing;
+        }
+
+        .node:hover {
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .node-label {
+            pointer-events: none;
+            font-size: 10px;
+            font-weight: 600;
+            text-anchor: middle;
+            fill: white;
+        }
+
+        .link {
+            stroke: #bdc3c7;
+            stroke-width: 1px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .link.highlighted {
+            stroke: #667eea;
+            stroke-width: 2px;
+            opacity: 1;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 350px;
+            display: none;
+        }
+
+        .tooltip-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #667eea;
+        }
+
+        .tooltip-content {
+            line-height: 1.5;
+        }
+
+        .tooltip-row {
+            margin: 4px 0;
+        }
+
+        .tooltip-label {
+            color: #95a5a6;
+        }
+
+        /* Status messages */
+        .status-message {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .status-message.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .status-message.warning {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        .zoom-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 11px;
+            color: #95a5a6;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+
+        /* Size scale legend */
+        .size-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .size-legend-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="width: 200px;"></div>
+            <div class="header-content">
+                <h1>🔬 <span>Reactome</span> Pathway-Gene Network</h1>
+                <p>Canonical pathway mapping for IL-6/STAT3 key genes • Bipartite gene↔pathway connectivity</p>
+            </div>
+            <div class="export-buttons">
+                <button class="reset-btn" onclick="resetLayout()">🔄 Reset Layout</button>
+                <button class="export-btn" onclick="exportToPNG()">📥 Download PNG</button>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div class="status-message info" id="statusMessage">
+            ⏳ Loading Reactome pathway database...
+        </div>
+
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+            <!-- File Upload Section -->
+            <div class="control-section">
+                <h3>📂 Gene Selection</h3>
+                <div class="file-inputs">
+                    <div class="file-input-row">
+                        <label>Key Genes CSV:</label>
+                        <input type="file" id="keyGenesFile" accept=".csv" onchange="loadCustomKeyGenes()">
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-top: 8px; line-height: 1.4;">
+                        💡 <strong>Tip:</strong> Reactome pathways load automatically. Upload a custom Key_genes.csv to
+                        filter to different genes.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Controls Section -->
+            <div class="control-section">
+                <h3>🎛️ Network Filters</h3>
+
+                <!-- Mode Selection Row -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="filter-item">
+                        <label>Mode</label>
+                        <select id="modeSelect" onchange="applyPreset()">
+                            <option value="dense">Dense</option>
+                            <option value="clean">Clean</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Min Overlap</label>
+                        <input type="number" id="minOverlap" value="2" min="1" max="20">
+                    </div>
+                </div>
+
+                <!-- Filter Groups Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
+                    <!-- Left Column: Pathway & Gene Filters -->
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+
+                        <!-- Pathway Filters Card -->
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 12px; border: 1px solid #e9ecef;">
+                            <div class="checkbox-row" style="margin-bottom: 10px;">
+                                <input type="checkbox" id="enablePathwayFilters" checked onchange="toggleFilters()">
+                                <span style="font-weight: 600; color: #667eea;">🔵 Pathway Filters</span>
+                            </div>
+                            <div id="pathwayFilterInputs">
+                                <div class="filter-item" style="margin-bottom: 8px;">
+                                    <label style="font-size: 11px;">Max Pathway Size</label>
+                                    <input type="number" id="maxPathwaySize" value="" placeholder="(off)"
+                                        style="font-size: 12px;">
+                                </div>
+                                <div class="checkbox-row">
+                                    <input type="checkbox" id="excludeTopLevel">
+                                    <span style="font-size: 11px;">Exclude top-level pathways</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gene Filters Card -->
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 12px; border: 1px solid #e9ecef;">
+                            <div class="checkbox-row" style="margin-bottom: 10px;">
+                                <input type="checkbox" id="enableGeneFilters" onchange="toggleFilters()">
+                                <span style="font-weight: 600; color: #e74c3c;">🔴 Gene Filters</span>
+                            </div>
+                            <div id="geneFilterInputs" style="opacity: 0.5;">
+                                <div class="filter-item">
+                                    <label style="font-size: 11px;">Min Connections</label>
+                                    <input type="number" id="minGeneConnections" value="2" min="1" max="20" disabled
+                                        style="font-size: 12px;">
+                                </div>
+                                <div style="font-size: 10px; color: #888; margin-top: 4px;">
+                                    Filter genes by pathway connections
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Category & Color Settings -->
+                    <div id="rightFilterColumn" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Category filter UI will be inserted here dynamically -->
+                    </div>
+                </div>
+
+                <div class="action-buttons" style="margin-top: 16px;">
+                    <button class="action-btn primary" onclick="applyFilters()">✓ Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend">
+            <div class="legend-item">
+                <div class="legend-circle" style="background: #667eea;"></div>
+                <span><strong>Pathway</strong> (size = overlap with key genes)</span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">Pathways</div>
+                <div class="stat-value" id="pathwayCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Genes</div>
+                <div class="stat-value" id="geneCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Connections</div>
+                <div class="stat-value" id="connectionCount">0</div>
+            </div>
+        </div>
+
+        <!-- Network Container -->
+        <div class="network-container" id="networkContainer">
+            <svg id="network"></svg>
+            <div class="zoom-hint">Scroll to zoom • Drag to pan • Drag nodes to reposition</div>
+            <div class="size-legend" id="sizeLegend" style="display: none;">
+                <div class="size-legend-title">Pathway Size = Overlap Count</div>
+                <svg width="220" height="150" id="sizeLegendSvg"></svg>
+            </div>
+        </div>
+
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script>
+        // ========== DATA STORAGE ==========
+        let rawEdges = [];           // {gene, term_id}
+        let pathwayById = {};        // term_id -> {term_id, pathway_name, pathway_size, overlap_size, description}
+        let geneMeta = {};           // gene -> {direction, il6r, human, mouseGene}
+        let keyGenes = new Set();    // Set of key gene symbols
+        let geneExpression = {};     // gene -> fold change value
+        let enableCategoryFilter = false;
+        let selectedCategories = new Set();
+        let availableCategories = [];
+
+        let currentNodes = [];
+        let currentLinks = [];
+        let simulation = null;
+        let manualPositions = {};
+
+        // Top-level pathways to exclude in Clean mode
+        const TOP_LEVEL_EXCLUDE = [
+            "Metabolism", "Signal Transduction", "Immune System",
+            "Disease", "Cell Cycle", "Gene expression (Transcription)",
+            "Developmental Biology", "Hemostasis", "Metabolism of proteins"
+        ];
+
+        // ========== PRESET VALUES ==========
+        const PRESETS = {
+            dense: { minOverlap: 2, maxPathwaySize: '', excludeTopLevel: false },
+            clean: { minOverlap: 3, maxPathwaySize: 300, excludeTopLevel: true },
+            custom: null  // Don't change values
+        };
+
+        // ========== CATEGORY COLOR MAP ==========
+        // Default colors - mutable by user
+        let currentColors = {
+            categories: {
+                'Metabolism': '#e67e22',
+                'ECM_Remodeling_Adhesion': '#9b59b6',
+                'Angiogenesis_Vascular_Hemostasis': '#e74c3c',
+                'Immune_Checkpoint_Tcell_Regulation': '#3498db',
+                'Innate_Immunity_Myeloid_Phagocyte': '#1abc9c',
+                'Apoptosis_Survival': '#34495e',
+                'Stress_Response_DNA_Damage_Autophagy': '#f39c12',
+                'Cell_Cycle_DNA_Replication': '#27ae60',
+                'Cytokine_JAK_STAT_Signaling': '#2ecc71',
+                'Oncogenic_GrowthFactor_Signaling': '#c0392b',
+                'Other_Mixed_or_Generic': '#95a5a6',
+                'Unannotated': '#bdc3c7'
+            },
+            genes: {
+                'Up_Regulated': '#e74c3c',    // Red
+                'Down_Regulated': '#3498db',  // Blue
+                'No_Data': '#95a5a6'          // Grey
+            }
+        };
+
+        // ========== HELPER FUNCTIONS ==========
+        function parseBool(val) {
+            if (!val) return false;
+            const v = String(val).trim().toUpperCase();
+            return v === 'TRUE' || v === '1' || v === true;
+        }
+
+        function getPathwayColor(d) {
+            if (d.type !== 'pathway') return getGeneColor(d);
+            return currentColors.categories[d.processPrimary] || currentColors.categories['Unannotated'];
+        }
+
+        function getGeneColor(d) {
+            const fc = geneExpression[d.label];
+            if (fc === undefined || fc === null) return currentColors.genes['No_Data'];
+            return fc >= 0 ? currentColors.genes['Up_Regulated'] : currentColors.genes['Down_Regulated'];
+        }
+
+        // ========== FILE LOADING ==========
+        function loadFromFolder() {
+            setStatus('info', '⏳ Loading CSV files from folder...');
+
+            Promise.all([
+                d3.csv('./data/Reactomegenepathwayedgekey.csv'),
+                d3.csv('./data/Reactomepathwaynodeskey.csv'),
+                d3.csv('./data/Keygenes.csv')
+            ]).then(([edges, pathways, genes]) => {
+                processData(edges, pathways, genes);
+                setStatus('success', `✓ Loaded ${edges.length} edges, ${pathways.length} pathways, ${genes.length} key genes`);
+            }).catch(err => {
+                setStatus('warning', '⚠️ Could not load from folder (CORS issue). Please upload files manually.');
+                console.error('Load error:', err);
+            });
+        }
+
+        function loadFromUploads() {
+            const edgesInput = document.getElementById('edgesFile');
+            const nodesInput = document.getElementById('nodesFile');
+            const genesInput = document.getElementById('keyGenesFile');
+
+            if (!edgesInput.files[0] || !nodesInput.files[0]) {
+                setStatus('warning', '⚠️ Please upload at least Edges and Pathways CSV files');
+                return;
+            }
+
+            setStatus('info', '⏳ Parsing uploaded files...');
+
+            const promises = [
+                readCSVFile(edgesInput.files[0]),
+                readCSVFile(nodesInput.files[0]),
+                genesInput.files[0] ? readCSVFile(genesInput.files[0]) : Promise.resolve([])
+            ];
+
+            Promise.all(promises).then(([edges, pathways, genes]) => {
+                processData(edges, pathways, genes);
+                setStatus('success', `✓ Loaded ${edges.length} edges, ${pathways.length} pathways, ${genes.length} key genes`);
+            }).catch(err => {
+                setStatus('warning', '⚠️ Error parsing files: ' + err.message);
+                console.error('Parse error:', err);
+            });
+        }
+
+        function readCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = d3.csvParse(e.target.result);
+                        resolve(data);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function loadReactomeData() {
+            setStatus('info', '⏳ Loading Reactome pathway database...');
+
+            Promise.all([
+                d3.csv('./data/Reactomegenepathwayedgekey.csv'),
+                d3.csv('./data/Reactomepathwaynodeskey.csv'),
+                d3.csv('./data/Keygenes.csv'),
+                d3.csv('./data/AllMacs_sgp_vs_human1.csv'),
+                d3.csv('./data/Reactome_pathways_process_multilabel.csv')  // Load category annotations
+            ]).then(([edges, pathways, genes, expression, pathwayCats]) => {
+                processData(edges, pathways, genes, expression, pathwayCats);
+                setStatus('success', `✓ Loaded ${pathways.length} Reactome pathways, ${genes.length} key genes, ${edges.length} connections`);
+            }).catch(err => {
+                setStatus('warning', '⚠️ Could not load Reactome data files. Please ensure the CSV files are in the same folder as this HTML file.');
+                console.error('Load error:', err);
+            });
+        }
+
+        function loadCustomKeyGenes() {
+            const genesInput = document.getElementById('keyGenesFile');
+
+            if (!genesInput.files[0]) {
+                return;
+            }
+
+            setStatus('info', '⏳ Loading custom gene list...');
+
+            readCSVFile(genesInput.files[0]).then(genes => {
+                // Rebuild geneMeta and keyGenes with new data
+                geneMeta = {};
+                keyGenes = new Set();
+                genes.forEach(g => {
+                    const symbol = g['Gene Symbol'] || g.gene || g.Gene;
+                    if (symbol) {
+                        keyGenes.add(symbol);
+                        geneMeta[symbol] = {
+                            direction: g['direction in Sgp130'] || '',
+                            il6r: g['IL6R+/-'] || '',
+                            human: g['Human1/Human2'] || '',
+                            mouseGene: g.mouse_gene || ''
+                        };
+                    }
+                });
+
+                console.log('Updated key genes:', keyGenes.size);
+                setStatus('success', `✓ Loaded ${genes.length} custom genes - network updated`);
+
+                // Reapply filters with new gene list
+                applyFilters();
+            }).catch(err => {
+                setStatus('warning', '⚠️ Error parsing gene file: ' + err.message);
+                console.error('Parse error:', err);
+            });
+        }
+
+        // ========== DATA PROCESSING ==========
+        function processData(edges, pathways, genes, expression, pathwayCats) {
+            // Build category lookup
+            const catByTermid = new Map();
+            if (pathwayCats) {
+                pathwayCats.forEach(r => {
+                    catByTermid.set(r.term_id, r);
+                });
+            }
+            // Build pathway lookup with category annotations
+            pathwayById = {};
+            pathways.forEach(p => {
+                const catRow = catByTermid.get(p.term_id);
+                pathwayById[p.term_id] = {
+                    term_id: p.term_id,
+                    pathway_name: p.pathway_name,
+                    pathway_size: parseInt(p.pathway_size) || 0,
+                    overlap_size: parseInt(p.overlap_size) || 0,
+                    description: p.description || '',
+                    processPrimary: catRow?.Process_primary || 'Unannotated',
+                    processAll: catRow?.Process_all || '',
+                    genericParentFlag: parseBool(catRow?.Generic_parent_flag)
+                };
+            });
+
+            // Collect available categories
+            availableCategories = [...new Set(Object.values(pathwayById).map(p => p.processPrimary))]
+                .filter(c => c && c !== 'Unannotated')
+                .sort();
+
+            console.log('Available categories:', availableCategories);
+
+            // Build gene metadata and key genes set
+            geneMeta = {};
+            keyGenes = new Set();
+            genes.forEach(g => {
+                const symbol = g['Gene Symbol'] || g.gene || g.Gene;
+                if (symbol) {
+                    keyGenes.add(symbol);
+                    geneMeta[symbol] = {
+                        direction: g['direction in Sgp130'] || '',
+                        il6r: g['IL6R+/-'] || '',
+                        human: g['Human1/Human2'] || '',
+                        mouseGene: g.mouse_gene || ''
+                    };
+                }
+            });
+
+            // Build fold change expression data
+            geneExpression = {};
+            if (expression) {
+                expression.forEach(row => {
+                    const gene = row.gene;
+                    const humanFC = parseFloat(row['Human_avg_log2FC.y']);
+                    if (gene && !isNaN(humanFC)) {
+                        geneExpression[gene] = humanFC;  // Store raw signed value
+                    }
+                });
+            }
+
+            // Store raw edges
+            rawEdges = edges.map(e => ({
+                gene: e.gene,
+                term_id: e.term_id
+            }));
+
+            console.log('Processed:', {
+                pathways: Object.keys(pathwayById).length,
+                keyGenes: keyGenes.size,
+                edges: rawEdges.length,
+                categories: availableCategories.length
+            });
+
+            // Render category filter UI
+            renderCategoryFilterUI();
+
+            // Update category legend
+            updateCategoryLegend();
+
+            // Apply filters and build network
+            applyFilters();
+        }
+
+        // ========== FILTER LOGIC ==========
+        function applyPreset() {
+            const mode = document.getElementById('modeSelect').value;
+            const preset = PRESETS[mode];
+
+            if (preset) {
+                document.getElementById('minOverlap').value = preset.minOverlap;
+                document.getElementById('maxPathwaySize').value = preset.maxPathwaySize;
+                document.getElementById('excludeTopLevel').checked = preset.excludeTopLevel;
+            }
+        }
+
+        function applyFilters() {
+            if (rawEdges.length === 0) {
+                console.log('No data loaded yet');
+                return;
+            }
+
+            const enablePathwayFilters = document.getElementById('enablePathwayFilters').checked;
+            const enableGeneFilters = document.getElementById('enableGeneFilters').checked;
+
+            let filteredEdges = rawEdges;
+
+            // Apply pathway filters if enabled
+            if (enablePathwayFilters) {
+                const minOverlap = parseInt(document.getElementById('minOverlap').value) || 1;
+                const maxPathwaySizeInput = document.getElementById('maxPathwaySize').value;
+                const maxPathwaySize = maxPathwaySizeInput ? parseInt(maxPathwaySizeInput) : Infinity;
+                const excludeTopLevel = document.getElementById('excludeTopLevel').checked;
+
+                // Filter pathways
+                const allowedPathways = new Set();
+                Object.values(pathwayById).forEach(p => {
+                    if (p.overlap_size >= minOverlap && p.pathway_size <= maxPathwaySize) {
+                        // Check top-level exclusion (includes genericParentFlag)
+                        const isTopLevel = TOP_LEVEL_EXCLUDE.includes(p.pathway_name) || p.genericParentFlag;
+                        if (!excludeTopLevel || !isTopLevel) {
+                            // Check category filter
+                            if (!enableCategoryFilter || selectedCategories.size === 0 || selectedCategories.has(p.processPrimary)) {
+                                allowedPathways.add(p.term_id);
+                            }
+                        }
+                    }
+                });
+
+                filteredEdges = filteredEdges.filter(e => allowedPathways.has(e.term_id));
+            }
+
+            // Filter to key genes only
+            filteredEdges = filteredEdges.filter(e =>
+                keyGenes.size === 0 || keyGenes.has(e.gene)
+            );
+
+            // Apply gene filters if enabled
+            if (enableGeneFilters) {
+                const minGeneConnections = parseInt(document.getElementById('minGeneConnections').value) || 1;
+
+                // Count connections per gene
+                const geneConnectionCount = {};
+                filteredEdges.forEach(e => {
+                    geneConnectionCount[e.gene] = (geneConnectionCount[e.gene] || 0) + 1;
+                });
+
+                // Filter out genes with too few connections
+                filteredEdges = filteredEdges.filter(e =>
+                    geneConnectionCount[e.gene] >= minGeneConnections
+                );
+            }
+
+            // Build nodes and links
+            // Rebuild pathways set from filtered edges
+            const pathwaysInNetwork = new Set(filteredEdges.map(e => e.term_id));
+            buildGraph(filteredEdges, pathwaysInNetwork);
+        }
+
+        function toggleFilters() {
+            const pathwayEnabled = document.getElementById('enablePathwayFilters').checked;
+            const geneEnabled = document.getElementById('enableGeneFilters').checked;
+
+            // Toggle pathway filter inputs
+            const pathwayInputs = document.querySelectorAll('#pathwayFilterInputs input, #pathwayFilterInputs select');
+            pathwayInputs.forEach(input => input.disabled = !pathwayEnabled);
+            document.getElementById('pathwayFilterInputs').style.opacity = pathwayEnabled ? '1' : '0.5';
+
+            // Toggle gene filter inputs
+            const geneInputs = document.querySelectorAll('#geneFilterInputs input');
+            geneInputs.forEach(input => input.disabled = !geneEnabled);
+            document.getElementById('geneFilterInputs').style.opacity = geneEnabled ? '1' : '0.5';
+        }
+
+        function buildGraph(edges, allowedPathways) {
+            const nodes = [];
+            const links = [];
+            const geneSet = new Set();
+            const pathwaySet = new Set();
+
+            // Create links and track nodes
+            edges.forEach(e => {
+                geneSet.add(e.gene);
+                pathwaySet.add(e.term_id);
+                links.push({
+                    source: 'p:' + e.term_id,
+                    target: 'g:' + e.gene
+                });
+            });
+
+            // Create pathway nodes with recalculated overlap
+            pathwaySet.forEach(termId => {
+                const p = pathwayById[termId];
+                if (p) {
+                    // Recalculate overlap_size based on actual filtered edges
+                    const actualOverlap = edges.filter(e => e.term_id === termId).length;
+
+                    nodes.push({
+                        id: 'p:' + termId,
+                        label: p.pathway_name,
+                        type: 'pathway',
+                        term_id: termId,
+                        overlap_size: actualOverlap,  // Use actual count, not pre-calculated
+                        pathway_size: p.pathway_size,
+                        description: p.description,
+                        processPrimary: p.processPrimary,
+                        processAll: p.processAll
+                    });
+                }
+            });
+
+            // Create gene nodes
+            geneSet.forEach(gene => {
+                const meta = geneMeta[gene] || {};
+                nodes.push({
+                    id: 'g:' + gene,
+                    label: gene,
+                    type: 'gene',
+                    direction: meta.direction,
+                    il6r: meta.il6r,
+                    human: meta.human,
+                    mouseGene: meta.mouseGene,
+                    connectedPathways: edges.filter(e => e.gene === gene).length
+                });
+            });
+
+            currentNodes = nodes;
+            currentLinks = links;
+
+            updateStats(nodes, links);
+            renderNetwork(nodes, links);
+        }
+
+        // ========== VISUALIZATION ==========
+        function getPathwayRadius(d) {
+            const overlap = d.overlap_size || 1;
+            // Scale: 18-60px based on overlap (1-16+)
+            const minRadius = 18;
+            const maxRadius = 60;
+            const scaledRadius = minRadius + 6 * Math.sqrt(overlap);
+            return Math.min(maxRadius, scaledRadius);
+        }
+
+        function getGeneRadius(d) {
+            const gene = d.label;
+            const fc = geneExpression[gene];
+
+            if (fc === undefined || fc === null) return 15;  // Default size if no expression data
+
+            // Scale: 15-35px based on fold change (0-3)
+            const minRadius = 15;
+            const maxRadius = 35;
+            const maxFC = 3;  // Cap at FC=3 for visualization
+
+            const absFC = Math.abs(fc);
+            const scaledFC = Math.min(absFC, maxFC);
+            return minRadius + (scaledFC / maxFC) * (maxRadius - minRadius);
+        }
+
+        function renderNetwork(nodes, links) {
+            const svg = d3.select("#network");
+            svg.selectAll("*").remove();
+
+            if (nodes.length === 0) {
+                return;
+            }
+
+            const width = document.getElementById("networkContainer").clientWidth;
+            const height = document.getElementById("networkContainer").clientHeight;
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            const g = svg.append("g");
+
+            // Zoom
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on("zoom", (event) => g.attr("transform", event.transform));
+            svg.call(zoom);
+
+            // Initial positions
+            const geneNodes = nodes.filter(n => n.type === 'gene');
+            const pathwayNodes = nodes.filter(n => n.type === 'pathway');
+
+            // Genes tightly clustered in center
+            geneNodes.forEach((n, i) => {
+                const angle = (i / geneNodes.length) * 2 * Math.PI;
+                const radius = 30 + Math.random() * 30; // Much smaller radius
+                n.x = centerX + Math.cos(angle) * radius;
+                n.y = centerY + Math.sin(angle) * radius;
+            });
+
+            // Pathways on outer ring - far from center
+            pathwayNodes.forEach((n, i) => {
+                const angle = (i / pathwayNodes.length) * 2 * Math.PI;
+                const radius = 350; // Fixed radius for consistent ring
+                n.x = centerX + Math.cos(angle) * radius;
+                n.y = centerY + Math.sin(angle) * radius;
+            });
+
+            // Apply manual positions
+            nodes.forEach(n => {
+                if (manualPositions[n.id]) {
+                    n.fx = manualPositions[n.id].x;
+                    n.fy = manualPositions[n.id].y;
+                }
+            });
+
+            // Force simulation with radial positioning
+            simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links)
+                    .id(d => d.id)
+                    .distance(d => {
+                        // Longer links to connect center genes to outer pathways
+                        return 280;
+                    })
+                    .strength(0.2)) // Weaker link force
+                .force("charge", d3.forceManyBody().strength(d => {
+                    // Genes repel less, pathways repel more to spread out
+                    return d.type === 'gene' ? -100 : -300;
+                }))
+                .force("radial", d3.forceRadial(d => {
+                    // Genes pulled to center (radius 0), pathways to outer ring
+                    return d.type === 'gene' ? 0 : 350;
+                }, centerX, centerY).strength(d => {
+                    // Strong radial force to maintain layout
+                    return d.type === 'gene' ? 0.8 : 0.9;
+                }))
+                .force("collision", d3.forceCollide()
+                    .radius(d => (d.type === 'pathway' ? getPathwayRadius(d) : getGeneRadius(d)) + 5)
+                    .strength(0.8));
+
+            // Draw links
+            const link = g.selectAll("line")
+                .data(links)
+                .enter()
+                .append("line")
+                .attr("class", "link");
+
+            // Draw nodes
+            const node = g.selectAll("circle")
+                .data(nodes)
+                .enter()
+                .append("circle")
+                .attr("class", d => `node ${d.type}`)
+                .attr("r", d => d.type === 'pathway' ? getPathwayRadius(d) : getGeneRadius(d))
+                .attr("fill", d => getPathwayColor(d))
+                .call(d3.drag()
+                    .on("start", dragStarted)
+                    .on("drag", dragged)
+                    .on("end", dragEnded))
+                .on("mouseover", showTooltip)
+                .on("mousemove", moveTooltip)
+                .on("mouseout", hideTooltip);
+
+            // Draw labels - fit inside circles
+            const labels = g.selectAll(".node-label-group")
+                .data(nodes)
+                .enter()
+                .append("g")
+                .attr("class", "node-label-group");
+
+            labels.each(function (d) {
+                const group = d3.select(this);
+                const radius = d.type === 'pathway' ? getPathwayRadius(d) : getGeneRadius(d);
+                const fontSize = d.type === 'pathway' ? Math.min(10, radius / 4) : 9;
+                const maxWidth = radius * 1.6;
+
+                // Calculate max characters that fit
+                const charWidth = fontSize * 0.55;
+                const maxChars = Math.floor(maxWidth / charWidth);
+                let displayText = d.label;
+                if (displayText.length > maxChars) {
+                    displayText = displayText.substring(0, maxChars - 2) + '..';
+                }
+
+                group.append("text")
+                    .attr("class", "node-label")
+                    .attr("dy", ".3em")
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .text(displayText)
+                    .style("font-size", fontSize + 'px');
+            });
+
+            // Simulation tick
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+
+                labels
+                    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+            });
+
+            // Show size legend
+            drawSizeLegend();
+        }
+
+        // ========== DRAG HANDLERS ==========
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            manualPositions[d.id] = { x: d.x, y: d.y };
+        }
+
+        // ========== TOOLTIPS ==========
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            let content = '';
+
+            // Highlight connected links
+            d3.selectAll('.link')
+                .classed('highlighted', l => {
+                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                    return sourceId === d.id || targetId === d.id;
+                })
+                .style('opacity', l => {
+                    const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+                    const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                    return (sourceId === d.id || targetId === d.id) ? 1 : 0.1;
+                });
+
+            if (d.type === 'gene') {
+                const fc = geneExpression[d.label];
+                const fcDisplay = fc ? fc.toFixed(2) : 'N/A';
+
+                content = `
+                    <div class="tooltip-title">🧬 ${d.label}</div>
+                    <div class="tooltip-content">
+                        <div class="tooltip-row"><span class="tooltip-label">Fold Change (|FC|):</span> ${fcDisplay}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Direction:</span> ${d.direction || 'N/A'}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">IL6R:</span> ${d.il6r || 'N/A'}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Human Cohorts:</span> ${d.human || 'N/A'}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Mouse Gene:</span> ${d.mouseGene || 'N/A'}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Connected Pathways:</span> ${d.connectedPathways}</div>
+                    </div>
+                `;
+            } else {
+                // Find connected genes
+                const connectedGenes = currentLinks
+                    .filter(l => l.source.id === d.id || (typeof l.source === 'string' && l.source === d.id))
+                    .map(l => {
+                        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+                        return targetId.replace('g:', '');
+                    });
+                const geneList = connectedGenes.slice(0, 10).join(', ');
+                const moreGenes = connectedGenes.length > 10 ? ` (+${connectedGenes.length - 10} more)` : '';
+
+                content = `
+                    <div class="tooltip-title">🔬 ${d.label}</div>
+                    <div class="tooltip-content">
+                        <div class="tooltip-row"><span class="tooltip-label">Term ID:</span> ${d.term_id}</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Category:</span> ${d.processPrimary || 'N/A'}</div>
+                        ${d.processAll ? `<div class="tooltip-row"><span class="tooltip-label">Labels:</span> ${d.processAll}</div>` : ''}
+                        <div class="tooltip-row"><span class="tooltip-label">Pathway Size:</span> ${d.pathway_size} genes</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Overlap:</span> ${d.overlap_size} key genes</div>
+                        <div class="tooltip-row"><span class="tooltip-label">Connected:</span> ${geneList}${moreGenes}</div>
+                    </div>
+                `;
+            }
+
+            tooltip.innerHTML = content;
+            tooltip.style.display = 'block';
+        }
+
+        function moveTooltip(event) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.left = (event.pageX + 15) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+            // Reset link highlighting
+            d3.selectAll('.link')
+                .classed('highlighted', false)
+                .style('opacity', 0.3);
+        }
+
+        // ========== STATS & LEGEND ==========
+        function updateStats(nodes, links) {
+            const pathways = nodes.filter(n => n.type === 'pathway').length;
+            const genes = nodes.filter(n => n.type === 'gene').length;
+
+            document.getElementById('pathwayCount').textContent = pathways;
+            document.getElementById('geneCount').textContent = genes;
+            document.getElementById('connectionCount').textContent = links.length;
+        }
+
+        function drawSizeLegend() {
+            const svg = d3.select('#sizeLegendSvg');
+            svg.selectAll('*').remove();
+
+            // Pathway size legend - circles with centered text
+            const pathwaySamples = [1, 4, 9, 16];
+            const g1 = svg.append('g').attr('transform', 'translate(10, 40)');
+
+            g1.append('text')
+                .attr('x', 0)
+                .attr('y', -25)
+                .style('font-size', '10px')
+                .style('font-weight', 'bold')
+                .text('Pathway (overlap)');
+
+            let xPos = 0;
+            pathwaySamples.forEach((overlap, i) => {
+                const minR = 18;
+                const maxR = 60;
+                const r = Math.min(maxR, minR + 6 * Math.sqrt(overlap));
+                // Scale down for legend display but maintain relative differences
+                const scaleFactor = 0.5;
+                const displayR = r * scaleFactor;
+
+                g1.append('circle')
+                    .attr('cx', xPos + displayR)
+                    .attr('cy', 0)
+                    .attr('r', displayR)
+                    .attr('fill', '#667eea')
+                    .attr('opacity', 0.7);
+
+                g1.append('text')
+                    .attr('x', xPos + displayR)
+                    .attr('y', 4)
+                    .attr('text-anchor', 'middle')
+                    .style('font-size', '9px')
+                    .style('font-weight', 'bold')
+                    .style('fill', 'white')
+                    .text(overlap);
+
+                // Move to next position: current radius + gap + next radius (estimated)
+                const nextOverlap = pathwaySamples[i + 1] || overlap;
+                const nextR = Math.min(maxR, minR + 6 * Math.sqrt(nextOverlap)) * scaleFactor;
+                xPos += displayR + nextR + 10;
+            });
+
+            // Gene size legend (fold change) - horizontally aligned
+            const geneSamples = [0, 1, 2, 3];
+            const g2 = svg.append('g').attr('transform', 'translate(10, 120)');
+
+            g2.append('text')
+                .attr('x', 0)
+                .attr('y', -25)
+                .style('font-size', '10px')
+                .style('font-weight', 'bold')
+                .text('Gene (|FC|)');
+
+            xPos = 0;
+            geneSamples.forEach((fc, i) => {
+                const minR = 15;
+                const maxR = 35;
+                const r = minR + (fc / 3) * (maxR - minR);
+                // Scale down for legend display but maintain relative differences
+                const scaleFactor = 0.6;
+                const displayR = r * scaleFactor;
+
+                g2.append('circle')
+                    .attr('cx', xPos + displayR)
+                    .attr('cy', 0)
+                    .attr('r', displayR)
+                    .attr('fill', currentColors.genes.Up_Regulated)
+                    .attr('opacity', 0.7);
+
+                g2.append('text')
+                    .attr('x', xPos + displayR)
+                    .attr('y', 3)
+                    .attr('text-anchor', 'middle')
+                    .style('font-size', '9px')
+                    .style('font-weight', 'bold')
+                    .style('fill', 'white')
+                    .text(fc);
+
+                // Move to next position: current radius + gap + next radius (estimated)
+                const nextFc = geneSamples[i + 1] !== undefined ? geneSamples[i + 1] : fc;
+                const nextR = (minR + (nextFc / 3) * (maxR - minR)) * scaleFactor;
+                xPos += displayR + nextR + 8;
+            });
+
+            document.getElementById('sizeLegend').style.display = 'block';
+        }
+
+        function setStatus(type, message) {
+            const el = document.getElementById('statusMessage');
+            el.className = 'status-message ' + type;
+            el.textContent = message;
+        }
+
+        // ========== EXPORT ==========
+        function exportToPNG() {
+            const svg = document.querySelector('#network');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            const scale = 3;
+            canvas.width = svg.clientWidth * scale;
+            canvas.height = svg.clientHeight * scale;
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const img = new Image();
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = function () {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(url);
+
+                canvas.toBlob(function (blob) {
+                    const link = document.createElement('a');
+                    link.download = 'Reactome-Network.png';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                }, 'image/png');
+            };
+
+            img.src = url;
+        }
+
+        function resetLayout() {
+            manualPositions = {};
+            if (currentNodes.length > 0) {
+                renderNetwork(currentNodes, currentLinks);
+            }
+        }
+
+        // Category UI and color functions are now defined below in the overrides section
+
+        // ========== INITIALIZE ==========
+        // Auto-load Reactome data on page load
+        setTimeout(() => {
+            loadReactomeData();
+        }, 500);
+
+        // ========== NEW COLOR UI OVERRIDES ==========
+        function renderCategoryFilterUI() {
+            // Insert into right column of the filter grid
+            const rightColumn = document.getElementById('rightFilterColumn');
+            if (!rightColumn) return;
+
+            // Remove existing category UI if any
+            const existingCategoryUI = document.getElementById('categoryFilterSection');
+            if (existingCategoryUI) existingCategoryUI.remove();
+
+            // Create category filter card
+            const categoryCard = document.createElement('div');
+            categoryCard.id = 'categoryFilterSection';
+            categoryCard.style.cssText = 'background: #f8f9fa; border-radius: 8px; padding: 12px; border: 1px solid #e9ecef;';
+            categoryCard.innerHTML = `
+                <div class="checkbox-row" style="margin-bottom: 10px;">
+                    <input type="checkbox" id="enableCategoryFilter" onchange="toggleCategoryFilter()">
+                    <span style="font-weight: 600; color: #9b59b6;">🏷️ Category Filters</span>
+                </div>
+                <div id="categoryFilterInputs" style="opacity: 0.5;">
+                    <div id="categoryCheckboxes" style="max-height: 160px; overflow-y: auto; display: grid; grid-template-columns: 1fr; gap: 4px;">
+                        ${availableCategories.map(cat => `
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 10px;">
+                                <input type="checkbox" class="category-checkbox" value="${cat}" disabled>
+                                <div id="cat-dot-${cat}" style="width: 10px; height: 10px; border-radius: 50%; background: ${currentColors.categories[cat] || '#bdc3c7'}; flex-shrink: 0;"></div>
+                                <span style="line-height: 1.2;">${cat.replace(/_/g, ' ')}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <button class="action-btn" style="margin-top: 8px; font-size: 10px; padding: 4px 8px;" onclick="clearCategories()" disabled>Clear All</button>
+                </div>
+            `;
+            rightColumn.appendChild(categoryCard);
+
+            // Create color settings card
+            const colorCard = document.createElement('div');
+            colorCard.id = 'colorSettingsSection';
+            colorCard.style.cssText = 'background: #f8f9fa; border-radius: 8px; padding: 12px; border: 1px solid #e9ecef;';
+            colorCard.innerHTML = `
+                <div style="font-weight: 600; color: #e67e22; margin-bottom: 10px;">🎨 Color Settings</div>
+                <div style="font-size: 10px; color: #666; margin-bottom: 6px;">Gene Regulation:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 10px;">
+                        <input type="color" value="${currentColors.genes.Up_Regulated}" onchange="updateColor('genes', 'Up_Regulated', this.value)" style="width: 20px; height: 20px; padding: 0; border: none; cursor: pointer;">
+                        Up
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 10px;">
+                        <input type="color" value="${currentColors.genes.Down_Regulated}" onchange="updateColor('genes', 'Down_Regulated', this.value)" style="width: 20px; height: 20px; padding: 0; border: none; cursor: pointer;">
+                        Down
+                    </label>
+                </div>
+                <button class="action-btn" style="font-size: 10px; width: 100%; padding: 4px 8px;" onclick="toggleCategoryColorPickers(this)">Category Colors ▼</button>
+                <div id="categoryColorPickers" style="display: none; margin-top: 8px; max-height: 120px; overflow-y: auto;">
+                    ${Object.keys(currentColors.categories).map(cat => `
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 10px; margin-bottom: 4px;">
+                            <input type="color" value="${currentColors.categories[cat]}" onchange="updateColor('categories', '${cat}', this.value)" style="width: 16px; height: 16px; padding: 0; border: none;">
+                            ${cat.replace(/_/g, ' ')}
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            rightColumn.appendChild(colorCard);
+
+            // Attach change event to all category checkboxes
+            categoryCard.querySelectorAll('.category-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateSelectedCategories);
+            });
+        }
+
+        function toggleCategoryFilter() {
+            enableCategoryFilter = document.getElementById('enableCategoryFilter').checked;
+            const inputs = document.querySelectorAll('#categoryFilterInputs input, #categoryFilterInputs button');
+            inputs.forEach(input => input.disabled = !enableCategoryFilter);
+            document.getElementById('categoryFilterInputs').style.opacity = enableCategoryFilter ? '1' : '0.5';
+            updateSelectedCategories();
+        }
+
+        function updateSelectedCategories() {
+            selectedCategories = new Set();
+            document.querySelectorAll('.category-checkbox:checked').forEach(cb => {
+                selectedCategories.add(cb.value);
+            });
+            applyFilters();
+        }
+
+        function clearCategories() {
+            document.querySelectorAll('.category-checkbox').forEach(cb => cb.checked = false);
+            updateSelectedCategories();
+        }
+
+        function toggleCategoryColorPickers(btn) {
+            const container = document.getElementById('categoryColorPickers');
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'grid' : 'none';
+            btn.textContent = isHidden ? 'Hide Category Colors ▲' : 'Show Category Colors ▼';
+        }
+
+        function updateColor(type, key, value) {
+            currentColors[type][key] = value;
+
+            // Update network
+            d3.selectAll('.node')
+                .attr('fill', d => type === 'categories' ? getPathwayColor(d) : getGeneColor(d));
+
+            // Update legends and dots
+            updateCategoryLegend();
+
+            if (type === 'categories') {
+                const dot = document.getElementById(`cat-dot-${key}`);
+                if (dot) dot.style.background = value;
+            }
+        }
+
+        function updateCategoryLegend() {
+            const legend = document.getElementById('legend');
+            if (!legend) return;
+
+            // Remove any existing category legend items
+            const existingCategoryItems = legend.querySelectorAll('.category-legend-item');
+            existingCategoryItems.forEach(item => item.remove());
+
+            // Add Gene Regulation Items
+            const geneItems = [
+                { label: 'Up-regulated Genes', color: currentColors.genes.Up_Regulated },
+                { label: 'Down-regulated Genes', color: currentColors.genes.Down_Regulated }
+            ];
+
+            geneItems.forEach(item => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item category-legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-circle" style="background: ${item.color};"></div>
+                    <span><strong>${item.label}</strong></span>
+                `;
+                legend.appendChild(legendItem);
+            });
+
+            // Add Category Items
+            const categoriesInNetwork = new Set();
+            currentNodes.forEach(n => {
+                if (n.type === 'pathway' && n.processPrimary) {
+                    categoriesInNetwork.add(n.processPrimary);
+                }
+            });
+
+            if (categoriesInNetwork.size > 0) {
+                const categoriesArray = Array.from(categoriesInNetwork).sort();
+                categoriesArray.forEach(cat => {
+                    const legendItem = document.createElement('div');
+                    legendItem.className = 'legend-item category-legend-item';
+                    legendItem.innerHTML = `
+                        <div class="legend-circle" style="background: ${currentColors.categories[cat] || '#bdc3c7'};"></div>
+                        <span>${cat.replace(/_/g, ' ')}</span>
+                    `;
+                    legend.appendChild(legendItem);
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>

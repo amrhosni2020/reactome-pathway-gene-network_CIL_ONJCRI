@@ -1137,17 +1137,7 @@
                 .data(links)
                 .enter()
                 .append("line")
-                .attr("class", "link")
-                .style("stroke", d => {
-                    // Color links based on target pathway's category
-                    const target = typeof d.target === 'string'
-                        ? nodes.find(n => n.id === d.target)
-                        : d.target;
-                    if (target && target.type === 'pathway' && target.category) {
-                        return currentColors.pathways[target.category] || '#95a5a6';
-                    }
-                    return '#95a5a6'; // Default gray
-                });
+                .attr("class", "link");
 
             // Draw nodes
             const node = g.selectAll("circle")
@@ -1232,9 +1222,6 @@
                 selectedGenes.add(d.id);
             }
 
-            // Apply radial layout for selected genes
-            applyRadialLayout();
-
             // Update visual feedback
             updateSelectionVisuals();
         }
@@ -1304,112 +1291,7 @@
 
         function clearSelection() {
             selectedGenes.clear();
-            restoreOriginalLayout();
             updateSelectionVisuals();
-        }
-
-        // ========== RADIAL LAYOUT FOR SELECTED GENES ==========
-        function applyRadialLayout() {
-            if (selectedGenes.size === 0) {
-                return restoreOriginalLayout();
-            }
-
-            // Stop simulation during custom positioning
-            if (simulation) simulation.stop();
-
-            selectedGenes.forEach(geneId => {
-                const geneNode = currentNodes.find(n => n.id === geneId);
-                if (!geneNode) return;
-
-                // Find connected pathways
-                const connectedPathways = currentNodes.filter(n =>
-                    n.type === 'pathway' &&
-                    currentLinks.some(l => {
-                        const sid = typeof l.source === 'string' ? l.source : l.source.id;
-                        const tid = typeof l.target === 'string' ? l.target : l.target.id;
-                        return (sid === geneId && tid === n.id) || (tid === geneId && sid === n.id);
-                    })
-                );
-
-                if (connectedPathways.length === 0) return;
-
-                // Arrange in arc around gene
-                const radius = 250; // Distance from gene
-                const arcSpan = Math.PI * 1.5; // 270 degrees
-                const angleStep = arcSpan / Math.max(connectedPathways.length - 1, 1);
-                const startAngle = -Math.PI * 0.75; // Start at top-left
-
-                connectedPathways.forEach((pathway, i) => {
-                    const angle = startAngle + i * angleStep;
-                    // Store target positions for animation
-                    pathway.targetX = geneNode.x + Math.cos(angle) * radius;
-                    pathway.targetY = geneNode.y + Math.sin(angle) * radius;
-                });
-            });
-
-            // Animate to target positions
-            animateToTargets();
-        }
-
-        function animateToTargets() {
-            // Animate nodes
-            d3.selectAll('.node')
-                .transition()
-                .duration(500)
-                .ease(d3.easeCubicOut)
-                .attr('cx', d => d.targetX !== undefined ? d.targetX : d.x)
-                .attr('cy', d => d.targetY !== undefined ? d.targetY : d.y)
-                .on('end', function (d) {
-                    // Update actual positions after animation
-                    if (d.targetX !== undefined) {
-                        d.x = d.targetX;
-                        d.y = d.targetY;
-                    }
-                });
-
-            // Animate labels
-            d3.selectAll('.node-label-group')
-                .transition()
-                .duration(500)
-                .ease(d3.easeCubicOut)
-                .attr('transform', d =>
-                    `translate(${d.targetX !== undefined ? d.targetX : d.x}, ${d.targetY !== undefined ? d.targetY : d.y})`
-                );
-
-            // Animate links
-            d3.selectAll('.link')
-                .transition()
-                .duration(500)
-                .ease(d3.easeCubicOut)
-                .attr('x1', d => {
-                    const source = typeof d.source === 'object' ? d.source : currentNodes.find(n => n.id === d.source);
-                    return source.targetX !== undefined ? source.targetX : source.x;
-                })
-                .attr('y1', d => {
-                    const source = typeof d.source === 'object' ? d.source : currentNodes.find(n => n.id === d.source);
-                    return source.targetY !== undefined ? source.targetY : source.y;
-                })
-                .attr('x2', d => {
-                    const target = typeof d.target === 'object' ? d.target : currentNodes.find(n => n.id === d.target);
-                    return target.targetX !== undefined ? target.targetX : target.x;
-                })
-                .attr('y2', d => {
-                    const target = typeof d.target === 'object' ? d.target : currentNodes.find(n => n.id === d.target);
-                    return target.targetY !== undefined ? target.targetY : target.y;
-                });
-        }
-
-        function restoreOriginalLayout() {
-            // Clear target positions
-            currentNodes.forEach(n => {
-                delete n.targetX;
-                delete n.targetY;
-            });
-
-            // Restart force simulation to restore natural layout
-            if (simulation) {
-                simulation.alpha(0.3).restart();
-            }
         }
 
         // ========== DRAG HANDLERS ==========

@@ -1019,14 +1019,18 @@
 
             if (fc === undefined || fc === null) return 15;  // Default size if no expression data
 
-            // Scale: 15-35px based on fold change (0-4)
+            // Calculate max FC dynamically
+            let maxFC = 3; // default minimum
+            Object.values(geneExpression).forEach(val => {
+                const absVal = Math.abs(val);
+                if (!isNaN(absVal) && absVal > maxFC) maxFC = absVal;
+            });
+
+            // Scale: 15-35px based on fold change (0 to max)
             const minRadius = 15;
             const maxRadius = 35;
-            const maxFC = 4;  // Cap at FC=4 for visualization
-
             const absFC = Math.abs(fc);
-            const scaledFC = Math.min(absFC, maxFC);
-            return minRadius + (scaledFC / maxFC) * (maxRadius - minRadius);
+            return minRadius + (Math.min(absFC, maxFC) / maxFC) * (maxRadius - minRadius);
         }
 
         function renderNetwork(nodes, links) {
@@ -1281,8 +1285,32 @@
             const svg = d3.select('#sizeLegendSvg');
             svg.selectAll('*').remove();
 
-            // Pathway size legend - circles with centered text
-            const pathwaySamples = [1, 4, 9, 16, 20];
+            // Calculate actual max FC from gene expression data
+            let maxFC = 0;
+            Object.values(geneExpression).forEach(fc => {
+                const absFC = Math.abs(fc);
+                if (!isNaN(absFC) && absFC > maxFC) {
+                    maxFC = absFC;
+                }
+            });
+            // Round up to nearest integer for display
+            maxFC = Math.ceil(maxFC);
+            if (maxFC < 3) maxFC = 3; // Ensure at least 3
+
+            // Calculate actual max pathway overlap from current nodes
+            let maxOverlap = 0;
+            currentNodes.forEach(n => {
+                if (n.type === 'pathway' && n.overlap_size > maxOverlap) {
+                    maxOverlap = n.overlap_size;
+                }
+            });
+            // Round up for display
+            maxOverlap = Math.ceil(maxOverlap);
+            if (maxOverlap < 10) maxOverlap = 10; // Ensure reasonable minimum
+
+            // Pathway size legend - 3 circles: [1, mid, max]
+            const midOverlap = Math.ceil(maxOverlap / 2);
+            const pathwaySamples = [1, midOverlap, maxOverlap];
             const g1 = svg.append('g').attr('transform', 'translate(10, 40)');
 
             g1.append('text')
@@ -1297,7 +1325,7 @@
                 const minR = 18;
                 const maxR = 60;
                 const r = Math.min(maxR, minR + 6 * Math.sqrt(overlap));
-                // Scale down for legend display but maintain relative differences
+                // Scale down for legend display
                 const scaleFactor = 0.5;
                 const displayR = r * scaleFactor;
 
@@ -1317,14 +1345,14 @@
                     .style('fill', 'white')
                     .text(overlap);
 
-                // Move to next position: current radius + gap + next radius (estimated)
+                // Move to next position
                 const nextOverlap = pathwaySamples[i + 1] || overlap;
                 const nextR = Math.min(maxR, minR + 6 * Math.sqrt(nextOverlap)) * scaleFactor;
-                xPos += displayR + nextR + 10;
+                xPos += displayR + nextR + 15;
             });
 
-            // Gene size legend (fold change) - horizontally aligned
-            const geneSamples = [0, 1, 2, 3, 4];
+            // Gene size legend - 3 circles: [0, 3, max]
+            const geneSamples = [0, 3, maxFC];
             const g2 = svg.append('g').attr('transform', 'translate(10, 120)');
 
             g2.append('text')
@@ -1338,8 +1366,8 @@
             geneSamples.forEach((fc, i) => {
                 const minR = 15;
                 const maxR = 35;
-                const r = minR + (fc / 4) * (maxR - minR);
-                // Scale down for legend display but maintain relative differences
+                const r = minR + (fc / maxFC) * (maxR - minR);
+                // Scale down for legend display
                 const scaleFactor = 0.6;
                 const displayR = r * scaleFactor;
 
@@ -1359,10 +1387,10 @@
                     .style('fill', 'white')
                     .text(fc);
 
-                // Move to next position: current radius + gap + next radius (estimated)
+                // Move to next position
                 const nextFc = geneSamples[i + 1] !== undefined ? geneSamples[i + 1] : fc;
-                const nextR = (minR + (nextFc / 4) * (maxR - minR)) * scaleFactor;
-                xPos += displayR + nextR + 8;
+                const nextR = (minR + (nextFc / maxFC) * (maxR - minR)) * scaleFactor;
+                xPos += displayR + nextR + 15;
             });
 
             document.getElementById('sizeLegend').style.display = 'block';

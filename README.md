@@ -1,12 +1,12 @@
 # Reactome Pathway-Gene Network Visualization
 
-An interactive bipartite network visualization showing the relationships between **IL-6/STAT3 key genes** and their associated **Reactome pathways**. This tool enables exploration of pathway-gene connectivity with dynamic filtering, color-coded categories, and fold-change visualization.
+An interactive bipartite network linking candidate IL‑6 trans‑signalling–associated genes from our mouse metastasis model to their curated Reactome pathways, enabling pathway–gene exploration with filtering and effect‑direction cues. The gene set is derived from mouse myeloid/macrophage differential expression after selective blockade of IL‑6 trans‑signalling (sgp130/sgp130Fc) and is cross‑referenced to human colorectal cancer liver metastasis datasets, where many of these trans‑signalling–suppressed mouse genes show increased expression relative to normal liver.
 
 ## 🔗 Live Interactive
 
 **[Launch the Interactive Visualization](https://amrhosni2020.github.io/reactome-pathway-gene-network_CIL_ONJCRI/)**
 
-## ✨ Features
+##  Features
 
 - **Interactive Network**: Drag nodes to reposition, scroll to zoom, pan to navigate
 - **Category Color Coding**: Pathways colored by biological process (Metabolism, Immune, Signaling, etc.)
@@ -58,8 +58,8 @@ Research Officer / Translational Cancer Researcher
 Olivia Newton-John Cancer Research Institute (ONJCRI)  
 Melbourne, Victoria, Australia
 
-📧 [Amr.Allam@onjcri.org.au](mailto:Amr.Allam@onjcri.org.au)  
-💼 [LinkedIn](https://linkedin.com/in/amrallam2016)
+[Amr.Allam@onjcri.org.au](mailto:Amr.Allam@onjcri.org.au)  
+ [LinkedIn](https://linkedin.com/in/amrallam2016)
 
 ## 📖 How to Cite
 
@@ -110,7 +110,7 @@ Please cite the original data sources when using the data:
 - Reactome: <https://reactome.org/about/cite>
 - This repository (see citation above)
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - [Reactome](https://reactome.org/) - Pathway database
 - [D3.js](https://d3js.org/) - Visualization library

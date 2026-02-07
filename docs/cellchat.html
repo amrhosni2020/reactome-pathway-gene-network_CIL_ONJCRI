@@ -323,7 +323,7 @@
         // Load all CSV files
         async function loadData() {
             try {
-                const [incoming AN, outgoingAN, incomingLM, outgoingLM] = await Promise.all([
+                const [incomingAN, outgoingAN, incomingLM, outgoingLM] = await Promise.all([
                     d3.csv('data/cellchat/incomingPathwaysAN.csv'),
                     d3.csv('data/cellchat/outgoingPathwaysAN.csv'),
                     d3.csv('data/cellchat/incomingPathwaysLM.csv'),

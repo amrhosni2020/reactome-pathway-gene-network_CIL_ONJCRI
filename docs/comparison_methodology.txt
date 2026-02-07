@@ -1,0 +1,46 @@
+CELLCHAT CROSS-SPECIES COMPARISON METHODOLOGY
+============================================
+
+1. DATA SOURCE MAPPING
+----------------------
+The analysis compares IL-6 dependency across Human and Mouse datasets by mapping specific conditions:
+
+- HUMAN DATA:
+  * Baseline (Control): Adjacent Normal (AN) -> `incomingPathwaysAN.csv`, `outgoingPathwaysAN.csv`
+  * Target (Disease): Liver Metastasis (LM) -> `incomingPathwaysLM.csv`, `outgoingPathwaysLM.csv`
+  
+- MOUSE DATA (IL-6 Signaling Experiment):
+  * Baseline (Trans-signaling blocked): Sgp130 (sgp130-Fc transgenic) -> `SgpPathwayPlotValuesIncoming_oct.csv`, `SgpPathwayPlotValuesOutgoing_oct.csv`
+  * Target (Wild Type): WT -> `WTPathwayPlotValuesIncoming_oct.csv`, `WTPathwayPlotValuesOutgoing_oct.csv`
+
+2. CELL TYPE HARMONIZATION (MERGING)
+------------------------------------
+- Human Dataset: Single "Macrophage" cluster.
+- Mouse Dataset: Three distinct clusters (C1q Macrophage, Spp1 Macrophage, Angio Macrophage).
+- Logic: To align with the human "Macrophage" cell type, the values for the three mouse macrophage clusters are averaged:
+  Value_Mouse_Macrophage = (Value_C1q + Value_Spp1 + Value_Angio) / 3
+
+3. QUANTITATIVE ANALYSIS
+------------------------
+- Metric: Percentage Change
+- Formula: ((Target Value - Baseline Value) / Baseline Value) * 100
+- Directionality:
+  * Positive Change (+): Interaction strength increases in Target (LM or WT).
+  * Negative Change (-): Interaction strength decreases in Target (LM or WT).
+
+4. COMPARISON LOGIC (IL-6 DEPENDENCY)
+-------------------------------------
+The "Comparison Mode" identifies pathways that are IL-6 dependent by looking for "Opposite Directions" between Human and Mouse experiments:
+
+- ANTI-TUMOR / IL-6 PROMOTED:
+  * Direction: Human LM > AN (positive change) AND Mouse WT < Sgp130 (negative change).
+  * Interpretation: The pathway is upregulated in human metastasis but lost when IL-6 trans-signaling is present in WT mouse (vs blocked Sgp130), suggesting its regulation depends on the IL-6 trans-signaling axis.
+
+- IL-6 REPRESSED:
+  * Direction: Human LM < AN (negative change) AND Mouse WT > Sgp130 (positive change).
+
+5. DATA PATHS
+-------------
+Raw data is located in:
+- docs/data/cellchat/*.csv (Human)
+- docs/data/cellchat/mouse/*.csv (Mouse Oct data)

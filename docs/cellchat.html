@@ -912,8 +912,12 @@
                 return;
             }
 
-            // Sort by absolute mouse change
-            const sorted = [...data].sort((a, b) => Math.abs(b.mouseChange) - Math.abs(a.mouseChange));
+            // Sort by algebraic mouse change (Descending: Positive -> Negative)
+            const sorted = [...data].sort((a, b) => b.mouseChange - a.mouseChange);
+
+
+
+
 
             // Mouse waterfall
             const mouseSection = document.createElement('div');
@@ -943,7 +947,7 @@
         }
 
         function renderComparisonWaterfall(container, data, species) {
-            const margin = { top: 20, right: 80, bottom: 40, left: 240 };
+            const margin = { top: 20, right: 80, bottom: 40, left: 160 };
             const barHeight = 28;
             const height = data.length * barHeight + margin.top + margin.bottom;
             const width = 650;
@@ -999,17 +1003,17 @@
                 .on('mouseover', (event, d) => showComparisonTooltip(event, d, species))
                 .on('mouseout', hideTooltip);
 
-            // Labels (Pathway Names) - Aligned to the far left
+            // Labels (Pathway Names) - Aligned to the axis with padding for values
             g.selectAll('.label')
                 .data(data)
                 .enter()
                 .append('text')
                 .attr('class', 'label')
-                .attr('x', -margin.left + 10) // Align to left edge of SVG
+                .attr('x', -60) // Closer to axis, leaving space for value labels
                 .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
                 .attr('dy', '0.35em')
-                .attr('text-anchor', 'start')
-                .style('font-size', '13px')
+                .attr('text-anchor', 'end') // Align end to sit next to the gap
+                .style('font-size', '12px')
                 .style('fill', '#f1f5f9')
                 .style('font-weight', '500')
                 .text(d => d.pathway);

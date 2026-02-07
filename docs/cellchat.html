@@ -270,8 +270,20 @@
 
         <div class="controls">
             <div class="control-group">
+                <label for="cellType">Cell Type:</label>
+                <select id="cellType">
+                    <option value="Macrophage" selected>Macrophage</option>
+                </select>
+            </div>
+
+            <div class="control-group">
                 <label for="minChange">Min % Change:</label>
-                <input type="number" id="minChange" min="0" max="100" step="5" value="10" style="width: 100px;">
+                <input type="number" id="minChange" min="0" max="500" step="5" value="10" style="width: 100px;">
+            </div>
+
+            <div class="control-group">
+                <label for="maxChange">Max % Change:</label>
+                <input type="number" id="maxChange" min="0" max="1000" step="10" value="1000" style="width: 110px;">
             </div>
 
             <div class="control-group">
@@ -324,7 +336,8 @@
             outgoingLM: null
         };
 
-        let macrophageChanges = null;
+        let cellTypes = [];
+        let cellTypeChanges = null;
         let selectedPathway = null;
 
         async function loadData() {
@@ -341,7 +354,20 @@
                 datasets.incomingLM = incomingLM;
                 datasets.outgoingLM = outgoingLM;
 
-                calculateMacrophageChanges();
+                // Extract cell types from data
+                cellTypes = Object.keys(incomingAN[0]).filter(k => k !== '');
+
+                // Populate cell type dropdown
+                const cellTypeSelect = document.getElementById('cellType');
+                cellTypes.forEach(ct => {
+                    const option = document.createElement('option');
+                    option.value = ct;
+                    option.textContent = ct;
+                    if (ct === 'Macrophage') option.selected = true;
+                    cellTypeSelect.appendChild(option);
+                });
+
+                calculateCellTypeChanges();
                 renderWaterfalls();
 
             } catch (error) {
@@ -365,14 +391,14 @@
                 const lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.['Macrophage']) || 0;
 
                 // Outgoing
-                const anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.['Macrophage']) || 0;
-                const lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.['Macrophage']) || 0;
+                const anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                const lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
 
                 if (anIn > 0 || lmIn > 0) {
                     const change = lmIn - anIn;
                     const percentChange = anIn > 0 ? (change / anIn) * 100 : (lmIn > 0 ? 100 : 0);
 
-                    macrophageChanges.incoming.push({
+                    cellTypeChanges.incoming.push({
                         pathway,
                         an: anIn,
                         lm: lmIn,
@@ -386,7 +412,7 @@
                     const change = lmOut - anOut;
                     const percentChange = anOut > 0 ? (change / anOut) * 100 : (lmOut > 0 ? 100 : 0);
 
-                    macrophageChanges.outgoing.push({
+                    cellTypeChanges.outgoing.push({
                         pathway,
                         an: anOut,
                         lm: lmOut,
@@ -398,16 +424,20 @@
             });
 
             // Sort by absolute percent change
-            macrophageChanges.incoming.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
-            macrophageChanges.outgoing.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
+            cellTypeChanges.incoming.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
+            cellTypeChanges.outgoing.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
         }
 
         function filterData(data) {
             const minChange = parseFloat(document.getElementById('minChange').value);
+            const maxChange = parseFloat(document.getElementById('maxChange').value);
             const topN = parseInt(document.getElementById('topN').value);
             const direction = document.getElementById('direction').value;
 
-            let filtered = data.filter(d => Math.abs(d.percentChange) >= minChange);
+            let filtered = data.filter(d => {
+                const absChange = Math.abs(d.percentChange);
+                return absChange >= minChange && absChange <= maxChange;
+            });
 
             if (direction === 'gain') {
                 filtered = filtered.filter(d => d.change > 0);
@@ -422,8 +452,9 @@
             const container = document.getElementById('waterfalls');
             container.innerHTML = '';
 
-            const incomingFiltered = filterData(macrophageChanges.incoming);
-            const outgoingFiltered = filterData(macrophageChanges.outgoing);
+            const selectedCellType = document.getElementById('cellType').value;
+            const incomingFiltered = filterData(cellTypeChanges.incoming);
+            const outgoingFiltered = filterData(cellTypeChanges.outgoing);
 
             renderWaterfall(incomingFiltered, 'incoming-waterfall',
                 'Incoming Pathways', 'What Macrophages Receive');
@@ -592,16 +623,24 @@
         }
 
         function resetFilters() {
+            document.getElementById('cellType').value = 'Macrophage';
             document.getElementById('minChange').value = '10';
+            document.getElementById('maxChange').value = '1000';
             document.getElementById('topN').value = '30';
             document.getElementById('direction').value = 'all';
             selectedPathway = null;
             d3.selectAll('.bar').classed('highlighted', false);
+            calculateCellTypeChanges();
             renderWaterfalls();
         }
 
         // Event listeners
+        document.getElementById('cellType').addEventListener('change', () => {
+            calculateCellTypeChanges();
+            renderWaterfalls();
+        });
         document.getElementById('minChange').addEventListener('change', renderWaterfalls);
+        document.getElementById('maxChange').addEventListener('change', renderWaterfalls);
         document.getElementById('topN').addEventListener('change', renderWaterfalls);
         document.getElementById('direction').addEventListener('change', renderWaterfalls);
 

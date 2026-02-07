@@ -15,44 +15,56 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f172a;
+            /* Slate 900 */
             min-height: 100vh;
             padding: 20px;
-            color: #2d3748;
+            color: #f1f5f9;
+            /* Slate 100 */
         }
 
         .container {
             max-width: 1600px;
             margin: 0 auto;
-            background: white;
+            background: #1e293b;
+            /* Slate 800 */
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             overflow: hidden;
+            border: 1px solid #334155;
         }
 
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1e293b;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
             color: white;
             padding: 30px 40px;
             text-align: center;
+            border-bottom: 1px solid #334155;
         }
 
         h1 {
             font-size: 2.2rem;
             font-weight: 700;
             margin-bottom: 8px;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: #818cf8;
+            display: inline-block;
         }
 
         .subtitle {
             font-size: 1.05rem;
-            opacity: 0.95;
+            opacity: 0.8;
             font-weight: 300;
+            color: #94a3b8;
         }
 
         .controls {
             padding: 25px 30px;
-            background: #f7fafc;
-            border-bottom: 2px solid #e2e8f0;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
             display: flex;
             gap: 25px;
             flex-wrap: wrap;
@@ -62,35 +74,37 @@
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
         }
 
         .control-group label {
             font-size: 0.85rem;
             font-weight: 600;
-            color: #4a5568;
+            color: #94a3b8;
+            letter-spacing: 0.025em;
         }
 
         select,
         input {
-            padding: 8px 14px;
-            border: 2px solid #e2e8f0;
+            padding: 10px 14px;
+            border: 1px solid #475569;
             border-radius: 6px;
             font-size: 0.9rem;
-            background: white;
+            background: #0f172a;
+            color: #f1f5f9;
             transition: all 0.2s;
         }
 
         select:focus,
         input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
         }
 
         .btn {
-            padding: 9px 18px;
-            background: #667eea;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             color: white;
             border: none;
             border-radius: 6px;
@@ -98,12 +112,13 @@
             cursor: pointer;
             transition: all 0.2s;
             font-size: 0.9rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
         }
 
         .btn:hover {
-            background: #5a67d8;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            filter: brightness(1.1);
         }
 
         .waterfalls-container {
@@ -111,22 +126,24 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 25px;
             padding: 30px;
+            background: #0f172a;
         }
 
         .waterfall-section {
-            background: white;
+            background: #1e293b;
             border-radius: 8px;
-            border: 2px solid #e2e8f0;
+            border: 1px solid #334155;
             overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .waterfall-title {
-            background: #f7fafc;
+            background: #1e293b;
             padding: 15px 20px;
             font-weight: 600;
             font-size: 1.05rem;
-            color: #2d3748;
-            border-bottom: 2px solid #e2e8f0;
+            color: #f1f5f9;
+            border-bottom: 1px solid #334155;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -134,14 +151,33 @@
 
         .pathway-count {
             font-size: 0.85rem;
-            color: #718096;
-            font-weight: 500;
+            color: #94a3b8;
+            background: #0f172a;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
 
         .waterfall-content {
             padding: 20px;
             overflow-y: auto;
             max-height: 700px;
+        }
+
+        .waterfall-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .waterfall-content::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .waterfall-content::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        .waterfall-content::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
         }
 
         .bar {
@@ -151,29 +187,36 @@
 
         .bar:hover {
             opacity: 0.8;
-            stroke: #1a202c;
-            stroke-width: 2;
+            stroke: #f1f5f9;
+            stroke-width: 1px;
         }
 
         .bar.highlighted {
-            stroke: #f59e0b;
-            stroke-width: 3;
+            stroke: #fbbf24;
+            stroke-width: 2px;
         }
 
         .axis text {
             font-size: 11px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            fill: #94a3b8;
+            /* Slate 400 */
+        }
+
+        .axis path,
+        .axis line {
+            stroke: #475569;
         }
 
         .axis-label {
             font-weight: 600;
             font-size: 12px;
+            fill: #cbd5e0;
         }
 
         .zero-line {
-            stroke: #4a5568;
+            stroke: #475569;
             stroke-width: 2;
-            stroke-dasharray: 5, 5;
+            stroke-dasharray: 4, 4;
         }
 
         .legend {
@@ -181,15 +224,17 @@
             align-items: center;
             gap: 20px;
             padding: 20px 30px;
-            background: #f7fafc;
-            border-top: 2px solid #e2e8f0;
+            background: #1e293b;
+            border-top: 1px solid #334155;
             flex-wrap: wrap;
+            color: #cbd5e0;
         }
 
         .legend-title {
             font-weight: 600;
             margin-right: 10px;
             font-size: 0.95rem;
+            color: #f1f5f9;
         }
 
         .legend-item {
@@ -208,8 +253,10 @@
         .tooltip {
             position: absolute;
             padding: 12px 16px;
-            background: rgba(26, 32, 44, 0.96);
-            color: white;
+            background: rgba(15, 23, 42, 0.95);
+            /* Slate 900 */
+            color: #f1f5f9;
+            border: 1px solid #334155;
             border-radius: 6px;
             font-size: 0.85rem;
             pointer-events: none;
@@ -217,7 +264,7 @@
             transition: opacity 0.2s;
             z-index: 1000;
             max-width: 320px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             line-height: 1.5;
         }
 
@@ -229,7 +276,7 @@
             font-weight: 700;
             font-size: 0.95rem;
             margin-bottom: 8px;
-            color: #fbbf24;
+            color: #818cf8;
         }
 
         .tooltip-row {
@@ -240,11 +287,12 @@
         }
 
         .tooltip-label {
-            color: #cbd5e0;
+            color: #94a3b8;
         }
 
         .tooltip-value {
             font-weight: 600;
+            color: #f1f5f9;
         }
 
         .loading {
@@ -962,7 +1010,7 @@
                 .attr('dy', '0.35em')
                 .attr('text-anchor', 'start')
                 .style('font-size', '13px')
-                .style('fill', '#2d3748')
+                .style('fill', '#f1f5f9')
                 .style('font-weight', '500')
                 .text(d => d.pathway);
 
@@ -983,7 +1031,7 @@
                     return change > 0 ? 'start' : 'end';
                 })
                 .style('font-size', '11px')
-                .style('fill', '#2d3748')
+                .style('fill', '#f1f5f9')
                 .style('font-weight', '600')
                 .text(d => {
                     const change = species === 'mouse' ? d.mouseChange : d.humanChange;
@@ -996,7 +1044,7 @@
                 .attr('x2', x(0))
                 .attr('y1', 0)
                 .attr('y2', data.length * barHeight)
-                .attr('stroke', '#cbd5e0')
+                .attr('stroke', '#475569')
                 .attr('stroke-width', 2);
 
             // X-axis
@@ -1109,7 +1157,8 @@
                     xScale(d.percentChange) + 5 : xScale(d.percentChange) - 5)
                 .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 4)
                 .attr('text-anchor', d => d.percentChange > 0 ? 'start' : 'end')
-                .attr('fill', '#1a202c')
+                .attr('fill', '#f1f5f9') // Light text for dark theme
+                .style('font-weight', '600')
                 .text(d => `${d.percentChange > 0 ? '+' : ''}${d.percentChange.toFixed(1)}%`);
 
             // Y-axis (pathway labels)
@@ -1122,7 +1171,8 @@
                 .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 3)
                 .attr('text-anchor', 'end')
                 .text(d => d.pathway)
-                .style('font-size', '9px')  // Reduced from 10px
+                .style('fill', '#cbd5e0') // Light text for dark theme
+                .style('font-size', '10px')
                 .style('cursor', 'pointer')
                 .on('click', (event, d) => selectPathway(d.pathway));
 

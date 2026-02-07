@@ -488,7 +488,7 @@
             }
 
             const margin = { top: 20, right: 100, bottom: 40, left: 150 };
-            const barHeight = 22;
+            const barHeight = 28;  // Increased from 22 to prevent label overlap
             const height = data.length * barHeight + margin.top + margin.bottom;
             const width = 700;
 
@@ -520,7 +520,7 @@
             const yScale = d3.scaleBand()
                 .domain(data.map(d => d.pathway))
                 .range([0, data.length * barHeight])
-                .padding(0.15);
+                .padding(0.2);  // Increased padding from 0.15 to 0.2
 
             // Zero line
             g.append('line')
@@ -565,10 +565,10 @@
                 .append('text')
                 .attr('class', 'axis')
                 .attr('x', -10)
-                .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 4)
+                .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 3)
                 .attr('text-anchor', 'end')
                 .text(d => d.pathway)
-                .style('font-size', '10px')
+                .style('font-size', '9px')  // Reduced from 10px
                 .style('cursor', 'pointer')
                 .on('click', (event, d) => selectPathway(d.pathway));
 

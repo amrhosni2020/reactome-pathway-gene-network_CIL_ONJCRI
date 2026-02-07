@@ -264,7 +264,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Macrophage Pathway Changes</h1>
+            <h1>CellChat Pathway Analysis</h1>
             <div class="subtitle">Cell-Cell Communication: Liver Metastasis vs Adjacent Normal</div>
         </header>
 
@@ -272,7 +272,7 @@
             <div class="control-group">
                 <label for="cellType">Cell Type:</label>
                 <select id="cellType">
-                    <option value="Macrophage" selected>Macrophage</option>
+                    <option value="All" selected>All Cell Types (Average)</option>
                 </select>
             </div>
 
@@ -363,7 +363,6 @@
                     const option = document.createElement('option');
                     option.value = ct;
                     option.textContent = ct;
-                    if (ct === 'Macrophage') option.selected = true;
                     cellTypeSelect.appendChild(option);
                 });
 
@@ -377,22 +376,36 @@
             }
         }
 
-        function calculateMacrophageChanges() {
+        function calculateCellTypeChanges() {
             const pathways = datasets.incomingAN.map(d => d['']).filter(p => p);
+            const selectedCellType = document.getElementById('cellType').value;
 
-            macrophageChanges = {
+            cellTypeChanges = {
                 incoming: [],
                 outgoing: []
             };
 
             pathways.forEach(pathway => {
-                // Incoming
-                const anIn = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.['Macrophage']) || 0;
-                const lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.['Macrophage']) || 0;
+                let anIn, lmIn, anOut, lmOut;
 
-                // Outgoing
-                const anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                const lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                if (selectedCellType === 'All') {
+                    // Average across all cell types
+                    const incomingRow = datasets.incomingAN.find(d => d[''] === pathway);
+                    const incomingLMRow = datasets.incomingLM.find(d => d[''] === pathway);
+                    const outgoingRow = datasets.outgoingAN.find(d => d[''] === pathway);
+                    const outgoingLMRow = datasets.outgoingLM.find(d => d[''] === pathway);
+
+                    anIn = cellTypes.reduce((sum, ct) => sum + (parseFloat(incomingRow?.[ct]) || 0), 0) / cellTypes.length;
+                    lmIn = cellTypes.reduce((sum, ct) => sum + (parseFloat(incomingLMRow?.[ct]) || 0), 0) / cellTypes.length;
+                    anOut = cellTypes.reduce((sum, ct) => sum + (parseFloat(outgoingRow?.[ct]) || 0), 0) / cellTypes.length;
+                    lmOut = cellTypes.reduce((sum, ct) => sum + (parseFloat(outgoingLMRow?.[ct]) || 0), 0) / cellTypes.length;
+                } else {
+                    // Specific cell type
+                    anIn = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                    lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                    anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                    lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                }
 
                 if (anIn > 0 || lmIn > 0) {
                     const change = lmIn - anIn;
@@ -423,9 +436,9 @@
                 }
             });
 
-            // Sort by absolute percent change
-            cellTypeChanges.incoming.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
-            cellTypeChanges.outgoing.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
+            // Sort by percent change: positive (gains) first, descending
+            cellTypeChanges.incoming.sort((a, b) => b.percentChange - a.percentChange);
+            cellTypeChanges.outgoing.sort((a, b) => b.percentChange - a.percentChange);
         }
 
         function filterData(data) {
@@ -623,7 +636,7 @@
         }
 
         function resetFilters() {
-            document.getElementById('cellType').value = 'Macrophage';
+            document.getElementById('cellType').value = 'All';
             document.getElementById('minChange').value = '10';
             document.getElementById('maxChange').value = '1000';
             document.getElementById('topN').value = '30';

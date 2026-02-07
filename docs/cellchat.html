@@ -830,20 +830,12 @@
             const incomingFiltered = applyFilters(comparisonResults.incoming);
             const outgoingFiltered = applyFilters(comparisonResults.outgoing);
 
-            // Title section
-            const titleSection = document.createElement('div');
-            titleSection.innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
-                    <h2 style="margin: 0 0 10px 0;">Cross-Species IL-6 Pathway Comparison</h2>
-                    <p style="margin: 0; opacity: 0.9;">Pathways with opposite directions between Mouse (WT vs sgp130) and Human (LM vs AN)</p>
-                </div>
-            `;
-            container.appendChild(titleSection);
+
 
             // Grid container for side-by-side waterfalls
             const gridContainer = document.createElement('div');
             gridContainer.style.display = 'grid';
-            gridContainer.style.gridTemplateColumns = '1fr 1fr';
+            gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
             gridContainer.style.gap = '30px';
             gridContainer.style.marginBottom = '40px';
 
@@ -855,7 +847,7 @@
             // Render outgoing comparison
             const gridContainer2 = document.createElement('div');
             gridContainer2.style.display = 'grid';
-            gridContainer2.style.gridTemplateColumns = '1fr 1fr';
+            gridContainer2.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
             gridContainer2.style.gap = '30px';
 
             renderComparisonPair(gridContainer2, outgoingFiltered, 'Outgoing Pathways');
@@ -903,22 +895,24 @@
         }
 
         function renderComparisonWaterfall(container, data, species) {
-            const margin = { top: 20, right: 100, bottom: 40, left: 150 };
+            const margin = { top: 20, right: 80, bottom: 40, left: 240 };
             const barHeight = 28;
             const height = data.length * barHeight + margin.top + margin.bottom;
-            const width = 550;
+            const width = 650;
 
             const svg = d3.select(container)
                 .append('svg')
-                .attr('width', width)
-                .attr('height', height);
+                .attr('width', '100%')
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .style('max-width', '100%')
+                .style('height', 'auto');
 
             const g = svg.append('g')
                 .attr('transform', `translate(${margin.left},${margin.top})`);
 
             // Get change values based on species
             const changes = data.map(d => species === 'mouse' ? d.mouseChange : d.humanChange);
-            const maxAbs = d3.max(changes.map(Math.abs));
+            const maxAbs = d3.max(changes.map(Math.abs)) || 100;
 
             const x = d3.scaleLinear()
                 .domain([-maxAbs, maxAbs])
@@ -957,18 +951,19 @@
                 .on('mouseover', (event, d) => showComparisonTooltip(event, d, species))
                 .on('mouseout', hideTooltip);
 
-            // Labels
+            // Labels (Pathway Names) - Aligned to the far left
             g.selectAll('.label')
                 .data(data)
                 .enter()
                 .append('text')
                 .attr('class', 'label')
-                .attr('x', -10)
+                .attr('x', -margin.left + 10) // Align to left edge of SVG
                 .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
                 .attr('dy', '0.35em')
-                .attr('text-anchor', 'end')
-                .style('font-size', '12px')
+                .attr('text-anchor', 'start')
+                .style('font-size', '13px')
                 .style('fill', '#2d3748')
+                .style('font-weight', '500')
                 .text(d => d.pathway);
 
             // Value labels

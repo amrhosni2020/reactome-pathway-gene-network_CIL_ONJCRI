@@ -277,6 +277,20 @@
             </div>
 
             <div class="control-group">
+                <label>
+                    <input type="checkbox" id="enableCommCell" onchange="toggleCommCell()">
+                    Communicating Cell
+                </label>
+            </div>
+
+            <div class="control-group" id="commCellGroup" style="display: none;">
+                <label for="commCell">Partner:</label>
+                <select id="commCell" disabled>
+                    <option value="">Select partner cell...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
                 <label for="minChange">Min % Change:</label>
                 <input type="number" id="minChange" min="0" max="500" step="5" value="10" style="width: 100px;">
             </div>
@@ -366,6 +380,15 @@
                     cellTypeSelect.appendChild(option);
                 });
 
+                // Populate communicating cell dropdown
+                const commCellSelect = document.getElementById('commCell');
+                cellTypes.forEach(ct => {
+                    const option = document.createElement('option');
+                    option.value = ct;
+                    option.textContent = ct;
+                    commCellSelect.appendChild(option);
+                });
+
                 calculateCellTypeChanges();
                 renderWaterfalls();
 
@@ -400,11 +423,38 @@
                     anOut = cellTypes.reduce((sum, ct) => sum + (parseFloat(outgoingRow?.[ct]) || 0), 0) / cellTypes.length;
                     lmOut = cellTypes.reduce((sum, ct) => sum + (parseFloat(outgoingLMRow?.[ct]) || 0), 0) / cellTypes.length;
                 } else {
-                    // Specific cell type
-                    anIn = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                    lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                    anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                    lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                    // Check if communicating cell filter is enabled
+                    const commCellEnabled = document.getElementById('enableCommCell').checked;
+                    const commCell = document.getElementById('commCell').value;
+
+                    if (commCellEnabled && commCell) {
+                        // Cell-to-cell specific communication
+                        // INCOMING: selectedCell receives <- commCell sends
+                        const selectedInAN = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        const selectedInLM = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        const commOutAN = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[commCell]) || 0;
+                        const commOutLM = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[commCell]) || 0;
+
+                        // Average both values for communication score
+                        anIn = (selectedInAN + commOutAN) / 2;
+                        lmIn = (selectedInLM + commOutLM) / 2;
+
+                        // OUTGOING: selectedCell sends -> commCell receives
+                        const selectedOutAN = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        const selectedOutLM = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        const commInAN = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[commCell]) || 0;
+                        const commInLM = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[commCell]) || 0;
+
+                        // Average both values for communication score
+                        anOut = (selectedOutAN + commInAN) / 2;
+                        lmOut = (selectedOutLM + commInLM) / 2;
+                    } else {
+                        // Specific cell type (normal mode)
+                        anIn = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                    }
                 }
 
                 if (anIn > 0 || lmIn > 0) {
@@ -466,13 +516,27 @@
             container.innerHTML = '';
 
             const selectedCellType = document.getElementById('cellType').value;
+            const commCellEnabled = document.getElementById('enableCommCell').checked;
+            const commCell = document.getElementById('commCell').value;
+
             const incomingFiltered = filterData(cellTypeChanges.incoming);
             const outgoingFiltered = filterData(cellTypeChanges.outgoing);
 
-            renderWaterfall(incomingFiltered, 'incoming-waterfall',
-                'Incoming Pathways', 'What Macrophages Receive');
-            renderWaterfall(outgoingFiltered, 'outgoing-waterfall',
-                'Outgoing Pathways', 'What Macrophages Send');
+            // Determine titles based on communicating cell filter
+            let incomingTitle, outgoingTitle;
+
+            if (commCellEnabled && commCell) {
+                // Show directional arrows for cell-to-cell communication
+                incomingTitle = `${selectedCellType} ← ${commCell}`;
+                outgoingTitle = `${selectedCellType} → ${commCell}`;
+            } else {
+                // Default titles
+                incomingTitle = 'Incoming Pathways';
+                outgoingTitle = 'Outgoing Pathways';
+            }
+
+            renderWaterfall(incomingFiltered, 'incoming-waterfall', incomingTitle);
+            renderWaterfall(outgoingFiltered, 'outgoing-waterfall', outgoingTitle);
         }
 
         function renderWaterfall(data, containerId, title, subtitle) {
@@ -635,8 +699,30 @@
             d3.selectAll(`.pathway-${pathway.replace(/[^a-zA-Z0-9]/g, '_')}`).classed('highlighted', true);
         }
 
+        function toggleCommCell() {
+            const enabled = document.getElementById('enableCommCell').checked;
+            const selectedCellType = document.getElementById('cellType').value;
+            const commCellGroup = document.getElementById('commCellGroup');
+            const commCellSelect = document.getElementById('commCell');
+
+            if (enabled && selectedCellType !== 'All') {
+                commCellGroup.style.display = 'block';
+                commCellSelect.disabled = false;
+            } else {
+                commCellGroup.style.display = 'none';
+                commCellSelect.disabled = true;
+                document.getElementById('enableCommCell').checked = false;
+            }
+
+            calculateCellTypeChanges();
+            renderWaterfalls();
+        }
+
         function resetFilters() {
             document.getElementById('cellType').value = 'All';
+            document.getElementById('enableCommCell').checked = false;
+            document.getElementById('commCell').value = '';
+            document.getElementById('commCellGroup').style.display = 'none';
             document.getElementById('minChange').value = '10';
             document.getElementById('maxChange').value = '1000';
             document.getElementById('topN').value = '30';
@@ -649,6 +735,17 @@
 
         // Event listeners
         document.getElementById('cellType').addEventListener('change', () => {
+            const selectedCellType = document.getElementById('cellType').value;
+            if (selectedCellType === 'All') {
+                // Disable communicating cell if "All" is selected
+                document.getElementById('enableCommCell').checked = false;
+                toggleCommCell();
+            }
+            calculateCellTypeChanges();
+            renderWaterfalls();
+        });
+
+        document.getElementById('commCell').addEventListener('change', () => {
             calculateCellTypeChanges();
             renderWaterfalls();
         });

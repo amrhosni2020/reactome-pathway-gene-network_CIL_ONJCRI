@@ -268,7 +268,16 @@
             <div class="subtitle">Cell-Cell Communication: Liver Metastasis vs Adjacent Normal</div>
         </header>
 
+
         <div class="controls">
+            <div class="control-group">
+                <label for="species">Species:</label>
+                <select id="species">
+                    <option value="human" selected>Human Metastasis</option>
+                    <option value="mouse">Mouse Metastasis</option>
+                </select>
+            </div>
+
             <div class="control-group">
                 <label for="cellType">Cell Type:</label>
                 <select id="cellType">
@@ -354,13 +363,34 @@
         let cellTypeChanges = null;
         let selectedPathway = null;
 
+
         async function loadData() {
             try {
+                const species = document.getElementById('species').value;
+
+                // Determine file paths based on species
+                let paths = {};
+                if (species === 'human') {
+                    paths = {
+                        incomingAN: 'data/cellchat/incomingPathwaysAN.csv',
+                        outgoingAN: 'data/cellchat/outgoingPathwaysAN.csv',
+                        incomingLM: 'data/cellchat/incomingPathwaysLM.csv',
+                        outgoingLM: 'data/cellchat/outgoingPathwaysLM.csv'
+                    };
+                } else { // mouse
+                    paths = {
+                        incomingAN: 'data/cellchat/mouse/SgpPathwayPlotValuesIncoming_oct.csv',
+                        outgoingAN: 'data/cellchat/mouse/SgpPathwayPlotValuesOutgoing_oct.csv',
+                        incomingLM: 'data/cellchat/mouse/WTPathwayPlotValuesIncoming_oct.csv',
+                        outgoingLM: 'data/cellchat/mouse/WTPathwayPlotValuesOutgoing_oct.csv'
+                    };
+                }
+
                 const [incomingAN, outgoingAN, incomingLM, outgoingLM] = await Promise.all([
-                    d3.csv('data/cellchat/incomingPathwaysAN.csv'),
-                    d3.csv('data/cellchat/outgoingPathwaysAN.csv'),
-                    d3.csv('data/cellchat/incomingPathwaysLM.csv'),
-                    d3.csv('data/cellchat/outgoingPathwaysLM.csv')
+                    d3.csv(paths.incomingAN),
+                    d3.csv(paths.outgoingAN),
+                    d3.csv(paths.incomingLM),
+                    d3.csv(paths.outgoingLM)
                 ]);
 
                 datasets.incomingAN = incomingAN;
@@ -369,25 +399,10 @@
                 datasets.outgoingLM = outgoingLM;
 
                 // Extract cell types from data
-                cellTypes = Object.keys(incomingAN[0]).filter(k => k !== '');
+                const rawCellTypes = Object.keys(incomingAN[0]).filter(k => k !== '');
 
-                // Populate cell type dropdown
-                const cellTypeSelect = document.getElementById('cellType');
-                cellTypes.forEach(ct => {
-                    const option = document.createElement('option');
-                    option.value = ct;
-                    option.textContent = ct;
-                    cellTypeSelect.appendChild(option);
-                });
-
-                // Populate communicating cell dropdown
-                const commCellSelect = document.getElementById('commCell');
-                cellTypes.forEach(ct => {
-                    const option = document.createElement('option');
-                    option.value = ct;
-                    option.textContent = ct;
-                    commCellSelect.appendChild(option);
-                });
+                // Populate cell type dropdown based on species
+                populateCellTypeDropdowns(species, rawCellTypes);
 
                 calculateCellTypeChanges();
                 renderWaterfalls();
@@ -397,6 +412,61 @@
                 document.getElementById('waterfalls').innerHTML =
                     '<div class="loading" style="color: #f56565;">Error loading data. Please check file paths.</div>';
             }
+        }
+
+        function populateCellTypeDropdowns(species, rawCellTypes) {
+            const cellTypeSelect = document.getElementById('cellType');
+            const commCellSelect = document.getElementById('commCell');
+
+            // Clear existing options except "All"
+            cellTypeSelect.innerHTML = '<option value="All" selected>All Cell Types (Average)</option>';
+            commCellSelect.innerHTML = '<option value="">Select partner cell...</option>';
+
+            if (species === 'mouse') {
+                // Add merged Macrophage option first
+                addCellTypeOption(cellTypeSelect, 'Macrophage');
+                addCellTypeOption(commCellSelect, 'Macrophage');
+
+                // Store raw cell types for averaging
+                cellTypes = rawCellTypes;
+
+                // Add all individual cell types
+                rawCellTypes.forEach(ct => {
+                    addCellTypeOption(cellTypeSelect, ct);
+                    addCellTypeOption(commCellSelect, ct);
+                });
+            } else {
+                // Human: add all cell types normally
+                cellTypes = rawCellTypes;
+                rawCellTypes.forEach(ct => {
+                    addCellTypeOption(cellTypeSelect, ct);
+                    addCellTypeOption(commCellSelect, ct);
+                });
+            }
+        }
+
+        function addCellTypeOption(selectElement, cellType) {
+            const option = document.createElement('option');
+            option.value = cellType;
+            option.textContent = cellType;
+            selectElement.appendChild(option);
+        }
+
+
+        function getCellValue(dataset, pathway, cellType) {
+            const species = document.getElementById('species').value;
+            const row = dataset.find(d => d[''] === pathway);
+
+            // For mouse species and "Macrophage" selection, merge the 3 subtypes
+            if (species === 'mouse' && cellType === 'Macrophage') {
+                const c1q = parseFloat(row?.['C1q Macrophage']) || 0;
+                const spp1 = parseFloat(row?.['Spp1 Macrophage']) || 0;
+                const angio = parseFloat(row?.['Angio Macrophage']) || 0;
+                return (c1q + spp1 + angio) / 3;
+            }
+
+            // For all other cases, return the cell type value directly
+            return parseFloat(row?.[cellType]) || 0;
         }
 
         function calculateCellTypeChanges() {
@@ -430,30 +500,30 @@
                     if (commCellEnabled && commCell) {
                         // Cell-to-cell specific communication
                         // INCOMING: selectedCell receives <- commCell sends
-                        const selectedInAN = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        const selectedInLM = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        const commOutAN = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[commCell]) || 0;
-                        const commOutLM = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[commCell]) || 0;
+                        const selectedInAN = getCellValue(datasets.incomingAN, pathway, selectedCellType);
+                        const selectedInLM = getCellValue(datasets.incomingLM, pathway, selectedCellType);
+                        const commOutAN = getCellValue(datasets.outgoingAN, pathway, commCell);
+                        const commOutLM = getCellValue(datasets.outgoingLM, pathway, commCell);
 
                         // Average both values for communication score
                         anIn = (selectedInAN + commOutAN) / 2;
                         lmIn = (selectedInLM + commOutLM) / 2;
 
                         // OUTGOING: selectedCell sends -> commCell receives
-                        const selectedOutAN = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        const selectedOutLM = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        const commInAN = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[commCell]) || 0;
-                        const commInLM = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[commCell]) || 0;
+                        const selectedOutAN = getCellValue(datasets.outgoingAN, pathway, selectedCellType);
+                        const selectedOutLM = getCellValue(datasets.outgoingLM, pathway, selectedCellType);
+                        const commInAN = getCellValue(datasets.incomingAN, pathway, commCell);
+                        const commInLM = getCellValue(datasets.incomingLM, pathway, commCell);
 
                         // Average both values for communication score
                         anOut = (selectedOutAN + commInAN) / 2;
                         lmOut = (selectedOutLM + commInLM) / 2;
                     } else {
                         // Specific cell type (normal mode)
-                        anIn = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
-                        lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.[selectedCellType]) || 0;
+                        anIn = getCellValue(datasets.incomingAN, pathway, selectedCellType);
+                        lmIn = getCellValue(datasets.incomingLM, pathway, selectedCellType);
+                        anOut = getCellValue(datasets.outgoingAN, pathway, selectedCellType);
+                        lmOut = getCellValue(datasets.outgoingLM, pathway, selectedCellType);
                     }
                 }
 
@@ -733,7 +803,17 @@
             renderWaterfalls();
         }
 
+
         // Event listeners
+        document.getElementById('species').addEventListener('change', async () => {
+            // Reload data for the selected species
+            await loadData();
+            // Reset communicating cell filter
+            document.getElementById('enableCommCell').checked = false;
+            document.getElementById('commCell').value = '';
+            toggleCommCell();
+        });
+
         document.getElementById('cellType').addEventListener('change', () => {
             const selectedCellType = document.getElementById('cellType').value;
             if (selectedCellType === 'All') {

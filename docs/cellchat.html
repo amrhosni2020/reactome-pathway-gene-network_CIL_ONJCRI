@@ -269,8 +269,17 @@
         </header>
 
 
+
         <div class="controls">
             <div class="control-group">
+                <label for="analysisMode">Analysis Mode:</label>
+                <select id="analysisMode">
+                    <option value="single" selected>Single Species</option>
+                    <option value="comparison">Comparison Mode</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="speciesGroup">
                 <label for="species">Species:</label>
                 <select id="species">
                     <option value="human" selected>Human Metastasis</option>
@@ -359,8 +368,25 @@
             outgoingLM: null
         };
 
+        // Comparison mode datasets
+        let comparisonDatasets = {
+            human: {
+                incomingAN: null,
+                outgoingAN: null,
+                incomingLM: null,
+                outgoingLM: null
+            },
+            mouse: {
+                incomingAN: null,
+                outgoingAN: null,
+                incomingLM: null,
+                outgoingLM: null
+            }
+        };
+
         let cellTypes = [];
         let cellTypeChanges = null;
+        let comparisonResults = null;
         let selectedPathway = null;
 
 
@@ -467,6 +493,166 @@
 
             // For all other cases, return the cell type value directly
             return parseFloat(row?.[cellType]) || 0;
+        }
+
+        async function loadComparisonData() {
+            try {
+                // Load ALL 8 CSV files (4 human + 4 mouse) in parallel
+                const [
+                    humanInAN, humanOutAN, humanInLM, humanOutLM,
+                    mouseInAN, mouseOutAN, mouseInLM, mouseOutLM
+                ] = await Promise.all([
+                    d3.csv('data/cellchat/incomingPathwaysAN.csv'),
+                    d3.csv('data/cellchat/outgoingPathwaysAN.csv'),
+                    d3.csv('data/cellchat/incomingPathwaysLM.csv'),
+                    d3.csv('data/cellchat/outgoingPathwaysLM.csv'),
+                    d3.csv('data/cellchat/mouse/SgpPathwayPlotValuesIncoming_oct.csv'),
+                    d3.csv('data/cellchat/mouse/SgpPathwayPlotValuesOutgoing_oct.csv'),
+                    d3.csv('data/cellchat/mouse/WTPathwayPlotValuesIncoming_oct.csv'),
+                    d3.csv('data/cellchat/mouse/WTPathwayPlotValuesOutgoing_oct.csv')
+                ]);
+
+                comparisonDatasets.human = {
+                    incomingAN: humanInAN,
+                    outgoingAN: humanOutAN,
+                    incomingLM: humanInLM,
+                    outgoingLM: humanOutLM
+                };
+
+                comparisonDatasets.mouse = {
+                    incomingAN: mouseInAN,
+                    outgoingAN: mouseOutAN,
+                    incomingLM: mouseInLM,
+                    outgoingLM: mouseOutLM
+                };
+
+                // Populate cell types with shared cells only
+                populateSharedCellTypes();
+
+                calculateComparisonChanges();
+                renderComparisonWaterfalls();
+
+            } catch (error) {
+                console.error('Error loading comparison data:', error);
+                document.getElementById('waterfalls').innerHTML =
+                    '<div class="loading" style="color: #f56565;">Error loading comparison data. Please check file paths.</div>';
+            }
+        }
+
+        function getComparisonCellValue(dataset, pathway, cellType, species) {
+            const row = dataset.find(d => d[''] === pathway);
+
+            // For mouse species and "Macrophage" selection, merge the 3 subtypes
+            if (species === 'mouse' && cellType === 'Macrophage') {
+                const c1q = parseFloat(row?.['C1q Macrophage']) || 0;
+                const spp1 = parseFloat(row?.['Spp1 Macrophage']) || 0;
+                const angio = parseFloat(row?.['Angio Macrophage']) || 0;
+                return (c1q + spp1 + angio) / 3;
+            }
+
+            // For all other cases, return the cell type value directly
+            return parseFloat(row?.[cellType]) || 0;
+        }
+
+        function populateSharedCellTypes() {
+            const cellTypeSelect = document.getElementById('cellType');
+            cellTypeSelect.innerHTML = '<option value="">Select cell type...</option>';
+
+            // Get cell types from both species
+            const humanCells = Object.keys(comparisonDatasets.human.incomingAN[0]).filter(k => k !== '');
+            const mouseCells = Object.keys(comparisonDatasets.mouse.incomingAN[0]).filter(k => k !== '');
+
+            const shared = new Set();
+
+            // Find common cells
+            humanCells.forEach(hCell => {
+                if (mouseCells.includes(hCell)) {
+                    shared.add(hCell);
+                }
+            });
+
+            // Add Macrophage if mouse has macrophage subtypes
+            if (mouseCells.includes('C1q Macrophage') ||
+                mouseCells.includes('Spp1 Macrophage') ||
+                mouseCells.includes('Angio Macrophage')) {
+                if (humanCells.includes('Macrophage')) {
+                    shared.add('Macrophage');
+                }
+            }
+
+            // Populate dropdown with shared cells
+            Array.from(shared).sort().forEach(ct => {
+                const option = document.createElement('option');
+                option.value = ct;
+                option.textContent = ct;
+                cellTypeSelect.appendChild(option);
+            });
+        }
+
+        function calculateComparisonChanges() {
+            const selectedCellType = document.getElementById('cellType').value;
+            if (!selectedCellType) return;
+
+            // Get shared pathways
+            const humanPathways = comparisonDatasets.human.incomingAN.map(d => d['']).filter(p => p);
+            const mousePathways = comparisonDatasets.mouse.incomingAN.map(d => d['']).filter(p => p);
+            const sharedPathways = humanPathways.filter(p => mousePathways.includes(p));
+
+            comparisonResults = {
+                incoming: [],
+                outgoing: []
+            };
+
+            // Calculate for incoming
+            sharedPathways.forEach(pathway => {
+                // Mouse changes (WT vs sgp130)
+                const mouseInWT = getComparisonCellValue(comparisonDatasets.mouse.incomingLM, pathway, selectedCellType, 'mouse');
+                const mouseInSgp = getComparisonCellValue(comparisonDatasets.mouse.incomingAN, pathway, selectedCellType, 'mouse');
+                const mouseInChange = mouseInSgp !== 0 ? ((mouseInWT - mouseInSgp) / mouseInSgp) * 100 : 0;
+
+                // Human changes (LM vs AN)
+                const humanInLM = getComparisonCellValue(comparisonDatasets.human.incomingLM, pathway, selectedCellType, 'human');
+                const humanInAN = getComparisonCellValue(comparisonDatasets.human.incomingAN, pathway, selectedCellType, 'human');
+                const humanInChange = humanInAN !== 0 ? ((humanInLM - humanInAN) / humanInAN) * 100 : 0;
+
+                // Check if opposite directions
+                if ((mouseInChange < 0 && humanInChange > 0) || (mouseInChange > 0 && humanInChange < 0)) {
+                    comparisonResults.incoming.push({
+                        pathway,
+                        mouseChange: mouseInChange,
+                        humanChange: humanInChange,
+                        mouseWT: mouseInWT,
+                        mouseSgp: mouseInSgp,
+                        humanLM: humanInLM,
+                        humanAN: humanInAN,
+                        category: mouseInChange < 0 && humanInChange > 0 ? 'il6-dependent' : 'anti-tumor'
+                    });
+                }
+            });
+
+            // Calculate for outgoing
+            sharedPathways.forEach(pathway => {
+                const mouseOutWT = getComparisonCellValue(comparisonDatasets.mouse.outgoingLM, pathway, selectedCellType, 'mouse');
+                const mouseOutSgp = getComparisonCellValue(comparisonDatasets.mouse.outgoingAN, pathway, selectedCellType, 'mouse');
+                const mouseOutChange = mouseOutSgp !== 0 ? ((mouseOutWT - mouseOutSgp) / mouseOutSgp) * 100 : 0;
+
+                const humanOutLM = getComparisonCellValue(comparisonDatasets.human.outgoingLM, pathway, selectedCellType, 'human');
+                const humanOutAN = getComparisonCellValue(comparisonDatasets.human.outgoingAN, pathway, selectedCellType, 'human');
+                const humanOutChange = humanOutAN !== 0 ? ((humanOutLM - humanOutAN) / humanOutAN) * 100 : 0;
+
+                if ((mouseOutChange < 0 && humanOutChange > 0) || (mouseOutChange > 0 && humanOutChange < 0)) {
+                    comparisonResults.outgoing.push({
+                        pathway,
+                        mouseChange: mouseOutChange,
+                        humanChange: humanOutChange,
+                        mouseWT: mouseOutWT,
+                        mouseSgp: mouseOutSgp,
+                        humanLM: humanOutLM,
+                        humanAN: humanOutAN,
+                        category: mouseOutChange < 0 && humanOutChange > 0 ? 'il6-dependent' : 'anti-tumor'
+                    });
+                }
+            });
         }
 
         function calculateCellTypeChanges() {
@@ -607,6 +793,245 @@
 
             renderWaterfall(incomingFiltered, 'incoming-waterfall', incomingTitle);
             renderWaterfall(outgoingFiltered, 'outgoing-waterfall', outgoingTitle);
+        }
+
+        function renderComparisonWaterfalls() {
+            const container = document.getElementById('waterfalls');
+            container.innerHTML = '';
+
+            if (!comparisonResults || !comparisonResults.incoming) {
+                container.innerHTML = '<div class="loading">Please select a cell type to begin comparison</div>';
+                return;
+            }
+
+            // Apply filters
+            const minChange = parseFloat(document.getElementById('minChange').value) || 0;
+            const maxChange = parseFloat(document.getElementById('maxChange').value) || 1000;
+            const topN = parseInt(document.getElementById('topN').value) || 50;
+            const direction = document.getElementById('direction').value || 'all';
+
+            function applyFilters(data) {
+                return data.filter(d => {
+                    const absMouseChange = Math.abs(d.mouseChange);
+                    const absHumanChange = Math.abs(d.humanChange);
+
+                    // Min/max filters on BOTH species
+                    if (absMouseChange < minChange || absHumanChange < minChange) return false;
+                    if (absMouseChange > maxChange || absHumanChange > maxChange) return false;
+
+                    //Direction filter
+                    if (direction === 'gains' && d.category !== 'anti-tumor') return false;
+                    if (direction === 'losses' && d.category !== 'il6-dependent') return false;
+
+                    return true;
+                }).slice(0, topN);
+            }
+
+            const incomingFiltered = applyFilters(comparisonResults.incoming);
+            const outgoingFiltered = applyFilters(comparisonResults.outgoing);
+
+            // Title section
+            const titleSection = document.createElement('div');
+            titleSection.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
+                    <h2 style="margin: 0 0 10px 0;">Cross-Species IL-6 Pathway Comparison</h2>
+                    <p style="margin: 0; opacity: 0.9;">Pathways with opposite directions between Mouse (WT vs sgp130) and Human (LM vs AN)</p>
+                </div>
+            `;
+            container.appendChild(titleSection);
+
+            // Grid container for side-by-side waterfalls
+            const gridContainer = document.createElement('div');
+            gridContainer.style.display = 'grid';
+            gridContainer.style.gridTemplateColumns = '1fr 1fr';
+            gridContainer.style.gap = '30px';
+            gridContainer.style.marginBottom = '40px';
+
+            // Render incoming comparison
+            renderComparisonPair(gridContainer, incomingFiltered, 'Incoming Pathways');
+
+            container.appendChild(gridContainer);
+
+            // Render outgoing comparison
+            const gridContainer2 = document.createElement('div');
+            gridContainer2.style.display = 'grid';
+            gridContainer2.style.gridTemplateColumns = '1fr 1fr';
+            gridContainer2.style.gap = '30px';
+
+            renderComparisonPair(gridContainer2, outgoingFiltered, 'Outgoing Pathways');
+
+            container.appendChild(gridContainer2);
+        }
+
+        function renderComparisonPair(container, data, title) {
+            if (data.length === 0) {
+                const noData = document.createElement('div');
+                noData.colSpan = 2;
+                noData.innerHTML = `<div class="loading">No pathways match filters for ${title}</div>`;
+                container.appendChild(noData);
+                return;
+            }
+
+            // Sort by absolute mouse change
+            const sorted = [...data].sort((a, b) => Math.abs(b.mouseChange) - Math.abs(a.mouseChange));
+
+            // Mouse waterfall
+            const mouseSection = document.createElement('div');
+            mouseSection.className = 'waterfall-section';
+            mouseSection.innerHTML = `
+                <div class="waterfall-title">
+                    Mouse (WT vs sgp130) - ${title}
+                    <span class="pathway-count">${sorted.length} pathways</span>
+                </div>
+            `;
+
+            renderComparisonWaterfall(mouseSection, sorted, 'mouse');
+            container.appendChild(mouseSection);
+
+            // Human waterfall
+            const humanSection = document.createElement('div');
+            humanSection.className = 'waterfall-section';
+            humanSection.innerHTML = `
+                <div class="waterfall-title">
+                    Human (LM vs AN) - ${title}
+                    <span class="pathway-count">${sorted.length} pathways</span>
+                </div>
+            `;
+
+            renderComparisonWaterfall(humanSection, sorted, 'human');
+            container.appendChild(humanSection);
+        }
+
+        function renderComparisonWaterfall(container, data, species) {
+            const margin = { top: 20, right: 100, bottom: 40, left: 150 };
+            const barHeight = 28;
+            const height = data.length * barHeight + margin.top + margin.bottom;
+            const width = 550;
+
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Get change values based on species
+            const changes = data.map(d => species === 'mouse' ? d.mouseChange : d.humanChange);
+            const maxAbs = d3.max(changes.map(Math.abs));
+
+            const x = d3.scaleLinear()
+                .domain([-maxAbs, maxAbs])
+                .range([0, width - margin.left - margin.right]);
+
+            const y = d3.scaleBand()
+                .domain(data.map((d, i) => i))
+                .range([0, data.length * barHeight])
+                .padding(0.15);
+
+            // Bars
+            g.selectAll('.bar')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('class', d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return `bar pathway-${d.pathway.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                })
+                .attr('x', d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return change < 0 ? x(change) : x(0);
+                })
+                .attr('y', (d, i) => y(i))
+                .attr('width', d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return Math.abs(x(change) - x(0));
+                })
+                .attr('height', y.bandwidth())
+                .attr('fill', d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return change > 0 ? '#48bb78' : '#f56565';
+                })
+                .attr('opacity', 0.8)
+                .on('click', (event, d) => selectPathway(d.pathway))
+                .on('mouseover', (event, d) => showComparisonTooltip(event, d, species))
+                .on('mouseout', hideTooltip);
+
+            // Labels
+            g.selectAll('.label')
+                .data(data)
+                .enter()
+                .append('text')
+                .attr('class', 'label')
+                .attr('x', -10)
+                .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', 'end')
+                .style('font-size', '12px')
+                .style('fill', '#2d3748')
+                .text(d => d.pathway);
+
+            // Value labels
+            g.selectAll('.value')
+                .data(data)
+                .enter()
+                .append('text')
+                .attr('class', 'value')
+                .attr('x', d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return change > 0 ? x(change) + 5 : x(change) - 5;
+                })
+                .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return change > 0 ? 'start' : 'end';
+                })
+                .style('font-size', '11px')
+                .style('fill', '#2d3748')
+                .style('font-weight', '600')
+                .text(d => {
+                    const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+                    return (change > 0 ? '+' : '') + change.toFixed(1) + '%';
+                });
+
+            // Zero line
+            g.append('line')
+                .attr('x1', x(0))
+                .attr('x2', x(0))
+                .attr('y1', 0)
+                .attr('y2', data.length * barHeight)
+                .attr('stroke', '#cbd5e0')
+                .attr('stroke-width', 2);
+
+            // X-axis
+            g.append('g')
+                .attr('transform', `translate(0,${data.length * barHeight})`)
+                .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + '%'))
+                .style('font-size', '12px');
+        }
+
+        function showComparisonTooltip(event, d, species) {
+            const tooltip = document.getElementById('tooltip');
+            const mouseChange = d.mouseChange;
+            const humanChange = d.humanChange;
+            const category = d.category === 'il6-dependent' ? 'IL-6 Dependent (↓Mouse, ↑Human)' : 'Anti-tumor (↑Mouse, ↓Human)';
+
+            tooltip.innerHTML = `
+                <strong>${d.pathway}</strong><br>
+                <strong>Category:</strong> ${category}<br><br>
+                <strong>Mouse (WT/sgp130):</strong><br>
+                sgp130: ${d.mouseSgp.toFixed(3)}<br>
+                WT: ${d.mouseWT.toFixed(3)}<br>
+                Change: ${(mouseChange > 0 ? '+' : '')}${mouseChange.toFixed(1)}%<br><br>
+                <strong>Human (LM/AN):</strong><br>
+                AN: ${d.humanAN.toFixed(3)}<br>
+                LM: ${d.humanLM.toFixed(3)}<br>
+                Change: ${(humanChange > 0 ? '+' : '')}${humanChange.toFixed(1)}%
+            `;
+            tooltip.style.left = event.pageX + 10 + 'px';
+            tooltip.style.top = event.pageY + 10 + 'px';
+            tooltip.classList.add('show');
         }
 
         function renderWaterfall(data, containerId, title, subtitle) {
@@ -789,22 +1214,57 @@
         }
 
         function resetFilters() {
-            document.getElementById('cellType').value = 'All';
-            document.getElementById('enableCommCell').checked = false;
-            document.getElementById('commCell').value = '';
-            document.getElementById('commCellGroup').style.display = 'none';
+            const mode = document.getElementById('analysisMode').value;
+
+            // Common resets
             document.getElementById('minChange').value = '10';
             document.getElementById('maxChange').value = '1000';
             document.getElementById('topN').value = '30';
             document.getElementById('direction').value = 'all';
             selectedPathway = null;
             d3.selectAll('.bar').classed('highlighted', false);
-            calculateCellTypeChanges();
-            renderWaterfalls();
+
+            if (mode === 'single') {
+                document.getElementById('cellType').value = 'All';
+                document.getElementById('enableCommCell').checked = false;
+                document.getElementById('commCell').value = '';
+                document.getElementById('commCellGroup').style.display = 'none';
+                calculateCellTypeChanges();
+                renderWaterfalls();
+            } else {
+                // Comparison mode
+                document.getElementById('cellType').value = '';
+                renderComparisonWaterfalls();
+            }
         }
 
 
         // Event listeners
+        document.getElementById('analysisMode').addEventListener('change', async () => {
+            const mode = document.getElementById('analysisMode').value;
+
+            if (mode === 'comparison') {
+                // Hide species selector in comparison mode
+                document.getElementById('speciesGroup').style.display = 'none';
+
+                // Hide communicating cell filter
+                document.getElementById('enableCommCell').parentElement.style.display = 'none';
+                document.getElementById('commCellGroup').style.display = 'none';
+
+                // Load comparison data
+                await loadComparisonData();
+            } else {
+                // Show species selector
+                document.getElementById('speciesGroup').style.display = 'block';
+
+                // Show communicating cell filter
+                document.getElementById('enableCommCell').parentElement.style.display = 'block';
+
+                // Reload single species data
+                await loadData();
+            }
+        });
+
         document.getElementById('species').addEventListener('change', async () => {
             // Reload data for the selected species
             await loadData();
@@ -816,13 +1276,22 @@
 
         document.getElementById('cellType').addEventListener('change', () => {
             const selectedCellType = document.getElementById('cellType').value;
-            if (selectedCellType === 'All') {
-                // Disable communicating cell if "All" is selected
+            const mode = document.getElementById('analysisMode').value;
+
+            if (selectedCellType === 'All' && mode === 'single') {
+                // Disable communicating cell if "All" is selected (only in single mode)
                 document.getElementById('enableCommCell').checked = false;
                 toggleCommCell();
             }
-            calculateCellTypeChanges();
-            renderWaterfalls();
+
+            // Recalculate based on mode
+            if (mode === 'comparison') {
+                calculateComparisonChanges();
+                renderComparisonWaterfalls();
+            } else {
+                calculateCellTypeChanges();
+                renderWaterfalls();
+            }
         });
 
         document.getElementById('commCell').addEventListener('change', () => {

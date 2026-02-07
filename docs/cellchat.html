@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CellChat Pathway Analysis - Cell-Cell Communication</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .controls {
+            padding: 25px 30px;
+            background: #f7fafc;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        select,
+        input {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        select:hover,
+        input:hover {
+            border-color: #cbd5e0;
+        }
+
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .heatmaps-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .heatmap-section {
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .heatmap-title {
+            background: #f7fafc;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .heatmap-content {
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .cell {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cell:hover {
+            stroke: #667eea;
+            stroke-width: 2;
+        }
+
+        .cell.highlighted {
+            stroke: #f59e0b;
+            stroke-width: 3;
+        }
+
+        .axis text {
+            font-size: 11px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .axis-label {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .macrophage-column {
+            fill: #fef3c7;
+            opacity: 0.3;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px 30px;
+            background: #f7fafc;
+            border-top: 2px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .legend-gradient {
+            width: 300px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .legend-labels {
+            display: flex;
+            gap: 20px;
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        .info-panel {
+            padding: 20px 30px;
+            background: #fffbeb;
+            border-top: 2px solid #fbbf24;
+            display: none;
+        }
+
+        .info-panel.active {
+            display: block;
+        }
+
+        .info-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+
+        .info-content {
+            font-size: 0.95rem;
+            color: #78350f;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.2rem;
+            color: #718096;
+        }
+
+        .tooltip {
+            position: absolute;
+            padding: 12px 16px;
+            background: rgba(26, 32, 44, 0.95);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>CellChat Pathway Analysis</h1>
+            <div class="subtitle">Cell-Cell Communication: Adjacent Normal vs Liver Metastasis</div>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="pathwayFilter">Filter Pathways:</label>
+                <input type="text" id="pathwayFilter" placeholder="Search pathways (e.g., IL6, MHC)..."
+                    style="width: 300px;">
+            </div>
+
+            <div class="control-group">
+                <label for="cellTypeFilter">Highlight Cell Type:</label>
+                <select id="cellTypeFilter">
+                    <option value="">All Cell Types</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="thresholdFilter">Min Probability:</label>
+                <input type="number" id="thresholdFilter" min="0" max="1" step="0.1" value="0" style="width: 120px;">
+            </div>
+
+            <button class="btn" onclick="resetFilters()">Reset Filters</button>
+        </div>
+
+        <div class="heatmaps-container" id="heatmaps">
+            <div class="loading">Loading CellChat data...</div>
+        </div>
+
+        <div class="legend">
+            <span class="legend-title">Communication Probability:</span>
+            <div class="legend-gradient" id="legendGradient"></div>
+            <div class="legend-labels">
+                <span>0.0 (Weak)</span>
+                <span>0.5 (Moderate)</span>
+                <span>1.0 (Strong)</span>
+            </div>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <div class="info-title" id="infoTitle"></div>
+            <div class="info-content" id="infoContent"></div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Global data storage
+        let datasets = {
+            incomingAN: null,
+            outgoingAN: null,
+            incomingLM: null,
+            outgoingLM: null
+        };
+
+        let cellTypes = [];
+        let pathways = [];
+        let selectedPathway = null;
+
+        // Color scale for heatmap
+        const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
+            .domain([0, 1]);
+
+        // Dimensions
+        const cellSize = 20;
+        const margin = { top: 30, right: 20, bottom: 150, left: 150 };
+
+        // Load all CSV files
+        async function loadData() {
+            try {
+                const [incoming AN, outgoingAN, incomingLM, outgoingLM] = await Promise.all([
+                    d3.csv('data/cellchat/incomingPathwaysAN.csv'),
+                    d3.csv('data/cellchat/outgoingPathwaysAN.csv'),
+                    d3.csv('data/cellchat/incomingPathwaysLM.csv'),
+                    d3.csv('data/cellchat/outgoingPathwaysLM.csv')
+                ]);
+
+                datasets.incomingAN = incomingAN;
+                datasets.outgoingAN = outgoingAN;
+                datasets.incomingLM = incomingLM;
+                datasets.outgoingLM = outgoingLM;
+
+                // Extract cell types and pathways
+                cellTypes = Object.keys(incomingAN[0]).filter(k => k !== '');
+                pathways = incomingAN.map(d => d['']).filter(p => p);
+
+                // Populate cell type filter
+                const select = document.getElementById('cellTypeFilter');
+                cellTypes.forEach(ct => {
+                    const option = document.createElement('option');
+                    option.value = ct;
+                    option.textContent = ct;
+                    if (ct === 'Macrophage') option.selected = true;
+                    select.appendChild(option);
+                });
+
+                // Render all heatmaps
+                renderAllHeatmaps();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('heatmaps').innerHTML =
+                    '<div class="loading" style="color: #f56565;">Error loading data. Please check file paths.</div>';
+            }
+        }
+
+        function renderAllHeatmaps() {
+            const container = document.getElementById('heatmaps');
+            container.innerHTML = '';
+
+            const heatmaps = [
+                { data: datasets.incomingAN, title: 'Incoming Pathways - Adjacent Normal (AN)', id: 'incoming-an' },
+                { data: datasets.outgoingAN, title: 'Outgoing Pathways - Adjacent Normal (AN)', id: 'outgoing-an' },
+                { data: datasets.incomingLM, title: 'Incoming Pathways - Liver Metastasis (LM)', id: 'incoming-lm' },
+                { data: datasets.outgoingLM, title: 'Outgoing Pathways - Liver Metastasis (LM)', id: 'outgoing-lm' }
+            ];
+
+            heatmaps.forEach(hm => {
+                const section = document.createElement('div');
+                section.className = 'heatmap-section';
+                section.innerHTML = `
+                    <div class="heatmap-title">${hm.title}</div>
+                    <div class="heatmap-content" id="${hm.id}"></div>
+                `;
+                container.appendChild(section);
+
+                renderHeatmap(hm.data, hm.id, hm.title);
+            });
+
+            // Create legend gradient
+            const grad = d3.select('#legendGradient');
+            const svg = grad.append('svg').attr('width', 300).attr('height', 20);
+            const gradient = svg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'color-gradient')
+                .attr('x1', '0%').attr('x2', '100%');
+
+            gradient.append('stop').attr('offset', '0%').attr('stop-color', colorScale(0));
+            gradient.append('stop').attr('offset', '50%').attr('stop-color', colorScale(0.5));
+            gradient.append('stop').attr('offset', '100%').attr('stop-color', colorScale(1));
+
+            svg.append('rect')
+                .attr('width', 300)
+                .attr('height', 20)
+                .style('fill', 'url(#color-gradient)');
+        }
+
+        function renderHeatmap(data, containerId, title) {
+            const width = cellTypes.length * cellSize + margin.left + margin.right;
+            const height = pathways.length * cellSize + margin.top + margin.bottom;
+
+            const svg = d3.select(`#${containerId}`)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Filter data based on threshold
+            const threshold = parseFloat(document.getElementById('thresholdFilter').value);
+            const pathwaySearch = document.getElementById('pathwayFilter').value.toLowerCase();
+
+            // Highlight Macrophage column
+            const macIndex = cellTypes.indexOf('Macrophage');
+            if (macIndex !== -1) {
+                g.append('rect')
+                    .attr('class', 'macrophage-column')
+                    .attr('x', macIndex * cellSize)
+                    .attr('y', 0)
+                    .attr('width', cellSize)
+                    .attr('height', pathways.length * cellSize);
+            }
+
+            // Draw cells
+            pathways.forEach((pathway, i) => {
+                if (pathwaySearch && !pathway.toLowerCase().includes(pathwaySearch)) return;
+
+                cellTypes.forEach((cellType, j) => {
+                    const row = data.find(d => d[''] === pathway);
+                    const value = row ? parseFloat(row[cellType]) : NaN;
+
+                    if (isNaN(value) || value < threshold) return;
+
+                    g.append('rect')
+                        .attr('class', `cell pathway-${pathway.replace(/[^a-zA-Z0-9]/g, '_')}`)
+                        .attr('x', j * cellSize)
+                        .attr('y', i * cellSize)
+                        .attr('width', cellSize)
+                        .attr('height', cellSize)
+                        .attr('fill', colorScale(value))
+                        .attr('stroke', '#fff')
+                        .attr('stroke-width', 0.5)
+                        .on('mouseover', (event) => showTooltip(event, pathway, cellType, value))
+                        .on('mouseout', hideTooltip)
+                        .on('click', () => selectPathway(pathway));
+                });
+            });
+
+            // X-axis (cell types)
+            g.selectAll('.cell-label')
+                .data(cellTypes)
+                .enter()
+                .append('text')
+                .attr('class', 'axis axis-label')
+                .attr('x', (d, i) => i * cellSize + cellSize / 2)
+                .attr('y', pathways.length * cellSize + 15)
+                .attr('text-anchor', 'start')
+                .attr('transform', (d, i) => `rotate(45, ${i * cellSize + cellSize / 2}, ${pathways.length * cellSize + 15})`)
+                .text(d => d)
+                .style('font-weight', d => d === 'Macrophage' ? 'bold' : 'normal')
+                .style('fill', d => d === 'Macrophage' ? '#b45309' : '#4a5568');
+
+            // Y-axis (pathways - only show filtered)
+            const filteredPathways = pathways.filter(p => !pathwaySearch || p.toLowerCase().includes(pathwaySearch));
+            g.selectAll('.pathway-label')
+                .data(filteredPathways)
+                .enter()
+                .append('text')
+                .attr('class', 'axis')
+                .attr('x', -5)
+                .attr('y', (d, i) => pathways.indexOf(d) * cellSize + cellSize / 2 + 4)
+                .attr('text-anchor', 'end')
+                .text(d => d)
+                .style('font-size', '10px');
+        }
+
+        function showTooltip(event, pathway, cellType, value) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <strong>${pathway}</strong><br/>
+                Cell Type: ${cellType}<br/>
+                Probability: ${value.toFixed(3)}
+            `;
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+            tooltip.classList.add('show');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        function selectPathway(pathway) {
+            selectedPathway = pathway;
+
+            // Highlight all cells for this pathway
+            d3.selectAll('.cell').classed('highlighted', false);
+            d3.selectAll(`.pathway-${pathway.replace(/[^a-zA-Z0-9]/g, '_')}`).classed('highlighted', true);
+
+            // Show info panel
+            const infoPanel = document.getElementById('infoPanel');
+            const infoTitle = document.getElementById('infoTitle');
+            const infoContent = document.getElementById('infoContent');
+
+            infoTitle.textContent = `Selected Pathway: ${pathway}`;
+            infoContent.innerHTML = `Click anywhere on the heatmaps to see details for this pathway across all conditions and cell types.`;
+
+            infoPanel.classList.add('active');
+        }
+
+        function resetFilters() {
+            document.getElementById('pathwayFilter').value = '';
+            document.getElementById('thresholdFilter').value = '0';
+            document.getElementById('cellTypeFilter').value = 'Macrophage';
+            selectedPathway = null;
+            d3.selectAll('.cell').classed('highlighted', false);
+            document.getElementById('infoPanel').classList.remove('active');
+            renderAllHeatmaps();
+        }
+
+        // Event listeners for filters
+        document.getElementById('pathwayFilter').addEventListener('input', () => renderAllHeatmaps());
+        document.getElementById('thresholdFilter').addEventListener('change', () => renderAllHeatmaps());
+        document.getElementById('cellTypeFilter').addEventListener('change', () => renderAllHeatmaps());
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+
+</html>

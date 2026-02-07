@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CellChat Pathway Analysis - Cell-Cell Communication</title>
+    <title>Macrophage Pathway Changes: LM vs AN</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         * {
@@ -22,7 +22,7 @@
         }
 
         .container {
-            max-width: 1800px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
@@ -33,18 +33,18 @@
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 30px 40px;
             text-align: center;
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             opacity: 0.95;
             font-weight: 300;
         }
@@ -54,7 +54,7 @@
             background: #f7fafc;
             border-bottom: 2px solid #e2e8f0;
             display: flex;
-            gap: 20px;
+            gap: 25px;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -62,28 +62,23 @@
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .control-group label {
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: #4a5568;
         }
 
         select,
         input {
-            padding: 10px 15px;
+            padding: 8px 14px;
             border: 2px solid #e2e8f0;
             border-radius: 6px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             background: white;
             transition: all 0.2s;
-        }
-
-        select:hover,
-        input:hover {
-            border-color: #cbd5e0;
         }
 
         select:focus,
@@ -93,45 +88,74 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .heatmaps-container {
+        .btn {
+            padding: 9px 18px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .waterfalls-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
+            gap: 25px;
             padding: 30px;
         }
 
-        .heatmap-section {
+        .waterfall-section {
             background: white;
             border-radius: 8px;
             border: 2px solid #e2e8f0;
             overflow: hidden;
         }
 
-        .heatmap-title {
+        .waterfall-title {
             background: #f7fafc;
             padding: 15px 20px;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             color: #2d3748;
             border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .heatmap-content {
+        .pathway-count {
+            font-size: 0.85rem;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .waterfall-content {
             padding: 20px;
-            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 700px;
         }
 
-        .cell {
+        .bar {
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .cell:hover {
-            stroke: #667eea;
+        .bar:hover {
+            opacity: 0.8;
+            stroke: #1a202c;
             stroke-width: 2;
         }
 
-        .cell.highlighted {
+        .bar.highlighted {
             stroke: #f59e0b;
             stroke-width: 3;
         }
@@ -143,18 +167,19 @@
 
         .axis-label {
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
         }
 
-        .macrophage-column {
-            fill: #fef3c7;
-            opacity: 0.3;
+        .zero-line {
+            stroke: #4a5568;
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
         }
 
         .legend {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
             padding: 20px 30px;
             background: #f7fafc;
             border-top: 2px solid #e2e8f0;
@@ -164,86 +189,74 @@
         .legend-title {
             font-weight: 600;
             margin-right: 10px;
-        }
-
-        .legend-gradient {
-            width: 300px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .legend-labels {
-            display: flex;
-            gap: 20px;
-            font-size: 0.875rem;
-            color: #718096;
-        }
-
-        .info-panel {
-            padding: 20px 30px;
-            background: #fffbeb;
-            border-top: 2px solid #fbbf24;
-            display: none;
-        }
-
-        .info-panel.active {
-            display: block;
-        }
-
-        .info-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #92400e;
-            margin-bottom: 10px;
-        }
-
-        .info-content {
             font-size: 0.95rem;
-            color: #78350f;
         }
 
-        .btn {
-            padding: 10px 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
         }
 
-        .btn:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            font-size: 1.2rem;
-            color: #718096;
+        .legend-box {
+            width: 30px;
+            height: 15px;
+            border-radius: 3px;
         }
 
         .tooltip {
             position: absolute;
             padding: 12px 16px;
-            background: rgba(26, 32, 44, 0.95);
+            background: rgba(26, 32, 44, 0.96);
             color: white;
             border-radius: 6px;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 1000;
-            max-width: 300px;
+            max-width: 320px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            line-height: 1.5;
         }
 
         .tooltip.show {
             opacity: 1;
+        }
+
+        .tooltip-pathway {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: #fbbf24;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin: 4px 0;
+        }
+
+        .tooltip-label {
+            color: #cbd5e0;
+        }
+
+        .tooltip-value {
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.1rem;
+            color: #718096;
+        }
+
+        .value-display {
+            font-size: 0.75rem;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -251,56 +264,59 @@
 <body>
     <div class="container">
         <header>
-            <h1>CellChat Pathway Analysis</h1>
-            <div class="subtitle">Cell-Cell Communication: Adjacent Normal vs Liver Metastasis</div>
+            <h1>Macrophage Pathway Changes</h1>
+            <div class="subtitle">Cell-Cell Communication: Liver Metastasis vs Adjacent Normal</div>
         </header>
 
         <div class="controls">
             <div class="control-group">
-                <label for="pathwayFilter">Filter Pathways:</label>
-                <input type="text" id="pathwayFilter" placeholder="Search pathways (e.g., IL6, MHC)..."
-                    style="width: 300px;">
+                <label for="minChange">Min % Change:</label>
+                <input type="number" id="minChange" min="0" max="100" step="5" value="10" style="width: 100px;">
             </div>
 
             <div class="control-group">
-                <label for="cellTypeFilter">Highlight Cell Type:</label>
-                <select id="cellTypeFilter">
-                    <option value="">All Cell Types</option>
+                <label for="topN">Top N Pathways:</label>
+                <select id="topN">
+                    <option value="10">Top 10</option>
+                    <option value="20">Top 20</option>
+                    <option value="30" selected>Top 30</option>
+                    <option value="50">Top 50</option>
+                    <option value="1000">All</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label for="thresholdFilter">Min Probability:</label>
-                <input type="number" id="thresholdFilter" min="0" max="1" step="0.1" value="0" style="width: 120px;">
+                <label for="direction">Show:</label>
+                <select id="direction">
+                    <option value="all">All Changes</option>
+                    <option value="gain">Gains Only (LM > AN)</option>
+                    <option value="loss">Losses Only (LM < AN)</option>
+                </select>
             </div>
 
             <button class="btn" onclick="resetFilters()">Reset Filters</button>
         </div>
 
-        <div class="heatmaps-container" id="heatmaps">
+        <div class="waterfalls-container" id="waterfalls">
             <div class="loading">Loading CellChat data...</div>
         </div>
 
         <div class="legend">
-            <span class="legend-title">Communication Probability:</span>
-            <div class="legend-gradient" id="legendGradient"></div>
-            <div class="legend-labels">
-                <span>0.0 (Weak)</span>
-                <span>0.5 (Moderate)</span>
-                <span>1.0 (Strong)</span>
+            <span class="legend-title">Color Legend:</span>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #10b981;"></div>
+                <span>Gained in Liver Metastasis (LM > AN)</span>
             </div>
-        </div>
-
-        <div class="info-panel" id="infoPanel">
-            <div class="info-title" id="infoTitle"></div>
-            <div class="info-content" id="infoContent"></div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ef4444;"></div>
+                <span>Lost in Liver Metastasis (LM < AN)</span>
+            </div>
         </div>
     </div>
 
     <div class="tooltip" id="tooltip"></div>
 
     <script>
-        // Global data storage
         let datasets = {
             incomingAN: null,
             outgoingAN: null,
@@ -308,19 +324,9 @@
             outgoingLM: null
         };
 
-        let cellTypes = [];
-        let pathways = [];
+        let macrophageChanges = null;
         let selectedPathway = null;
 
-        // Color scale for heatmap
-        const colorScale = d3.scaleSequential(d3.interpolateRdYlGn)
-            .domain([0, 1]);
-
-        // Dimensions
-        const cellSize = 20;
-        const margin = { top: 30, right: 20, bottom: 150, left: 150 };
-
-        // Load all CSV files
         async function loadData() {
             try {
                 const [incomingAN, outgoingAN, incomingLM, outgoingLM] = await Promise.all([
@@ -335,74 +341,123 @@
                 datasets.incomingLM = incomingLM;
                 datasets.outgoingLM = outgoingLM;
 
-                // Extract cell types and pathways
-                cellTypes = Object.keys(incomingAN[0]).filter(k => k !== '');
-                pathways = incomingAN.map(d => d['']).filter(p => p);
-
-                // Populate cell type filter
-                const select = document.getElementById('cellTypeFilter');
-                cellTypes.forEach(ct => {
-                    const option = document.createElement('option');
-                    option.value = ct;
-                    option.textContent = ct;
-                    if (ct === 'Macrophage') option.selected = true;
-                    select.appendChild(option);
-                });
-
-                // Render all heatmaps
-                renderAllHeatmaps();
+                calculateMacrophageChanges();
+                renderWaterfalls();
 
             } catch (error) {
                 console.error('Error loading data:', error);
-                document.getElementById('heatmaps').innerHTML =
+                document.getElementById('waterfalls').innerHTML =
                     '<div class="loading" style="color: #f56565;">Error loading data. Please check file paths.</div>';
             }
         }
 
-        function renderAllHeatmaps() {
-            const container = document.getElementById('heatmaps');
-            container.innerHTML = '';
+        function calculateMacrophageChanges() {
+            const pathways = datasets.incomingAN.map(d => d['']).filter(p => p);
 
-            const heatmaps = [
-                { data: datasets.incomingAN, title: 'Incoming Pathways - Adjacent Normal (AN)', id: 'incoming-an' },
-                { data: datasets.outgoingAN, title: 'Outgoing Pathways - Adjacent Normal (AN)', id: 'outgoing-an' },
-                { data: datasets.incomingLM, title: 'Incoming Pathways - Liver Metastasis (LM)', id: 'incoming-lm' },
-                { data: datasets.outgoingLM, title: 'Outgoing Pathways - Liver Metastasis (LM)', id: 'outgoing-lm' }
-            ];
+            macrophageChanges = {
+                incoming: [],
+                outgoing: []
+            };
 
-            heatmaps.forEach(hm => {
-                const section = document.createElement('div');
-                section.className = 'heatmap-section';
-                section.innerHTML = `
-                    <div class="heatmap-title">${hm.title}</div>
-                    <div class="heatmap-content" id="${hm.id}"></div>
-                `;
-                container.appendChild(section);
+            pathways.forEach(pathway => {
+                // Incoming
+                const anIn = parseFloat(datasets.incomingAN.find(d => d[''] === pathway)?.['Macrophage']) || 0;
+                const lmIn = parseFloat(datasets.incomingLM.find(d => d[''] === pathway)?.['Macrophage']) || 0;
 
-                renderHeatmap(hm.data, hm.id, hm.title);
+                // Outgoing
+                const anOut = parseFloat(datasets.outgoingAN.find(d => d[''] === pathway)?.['Macrophage']) || 0;
+                const lmOut = parseFloat(datasets.outgoingLM.find(d => d[''] === pathway)?.['Macrophage']) || 0;
+
+                if (anIn > 0 || lmIn > 0) {
+                    const change = lmIn - anIn;
+                    const percentChange = anIn > 0 ? (change / anIn) * 100 : (lmIn > 0 ? 100 : 0);
+
+                    macrophageChanges.incoming.push({
+                        pathway,
+                        an: anIn,
+                        lm: lmIn,
+                        change: change,
+                        percentChange: percentChange,
+                        foldChange: anIn > 0 ? lmIn / anIn : (lmIn > 0 ? Infinity : 0)
+                    });
+                }
+
+                if (anOut > 0 || lmOut > 0) {
+                    const change = lmOut - anOut;
+                    const percentChange = anOut > 0 ? (change / anOut) * 100 : (lmOut > 0 ? 100 : 0);
+
+                    macrophageChanges.outgoing.push({
+                        pathway,
+                        an: anOut,
+                        lm: lmOut,
+                        change: change,
+                        percentChange: percentChange,
+                        foldChange: anOut > 0 ? lmOut / anOut : (lmOut > 0 ? Infinity : 0)
+                    });
+                }
             });
 
-            // Create legend gradient
-            const grad = d3.select('#legendGradient');
-            const svg = grad.append('svg').attr('width', 300).attr('height', 20);
-            const gradient = svg.append('defs')
-                .append('linearGradient')
-                .attr('id', 'color-gradient')
-                .attr('x1', '0%').attr('x2', '100%');
-
-            gradient.append('stop').attr('offset', '0%').attr('stop-color', colorScale(0));
-            gradient.append('stop').attr('offset', '50%').attr('stop-color', colorScale(0.5));
-            gradient.append('stop').attr('offset', '100%').attr('stop-color', colorScale(1));
-
-            svg.append('rect')
-                .attr('width', 300)
-                .attr('height', 20)
-                .style('fill', 'url(#color-gradient)');
+            // Sort by absolute percent change
+            macrophageChanges.incoming.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
+            macrophageChanges.outgoing.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
         }
 
-        function renderHeatmap(data, containerId, title) {
-            const width = cellTypes.length * cellSize + margin.left + margin.right;
-            const height = pathways.length * cellSize + margin.top + margin.bottom;
+        function filterData(data) {
+            const minChange = parseFloat(document.getElementById('minChange').value);
+            const topN = parseInt(document.getElementById('topN').value);
+            const direction = document.getElementById('direction').value;
+
+            let filtered = data.filter(d => Math.abs(d.percentChange) >= minChange);
+
+            if (direction === 'gain') {
+                filtered = filtered.filter(d => d.change > 0);
+            } else if (direction === 'loss') {
+                filtered = filtered.filter(d => d.change < 0);
+            }
+
+            return filtered.slice(0, topN);
+        }
+
+        function renderWaterfalls() {
+            const container = document.getElementById('waterfalls');
+            container.innerHTML = '';
+
+            const incomingFiltered = filterData(macrophageChanges.incoming);
+            const outgoingFiltered = filterData(macrophageChanges.outgoing);
+
+            renderWaterfall(incomingFiltered, 'incoming-waterfall',
+                'Incoming Pathways', 'What Macrophages Receive');
+            renderWaterfall(outgoingFiltered, 'outgoing-waterfall',
+                'Outgoing Pathways', 'What Macrophages Send');
+        }
+
+        function renderWaterfall(data, containerId, title, subtitle) {
+            if (data.length === 0) {
+                const section = document.createElement('div');
+                section.className = 'waterfall-section';
+                section.innerHTML = `
+                    <div class="waterfall-title">${title}</div>
+                    <div class="loading" style="padding: 40px;">No pathways match current filters</div>
+                `;
+                document.getElementById('waterfalls').appendChild(section);
+                return;
+            }
+
+            const margin = { top: 20, right: 100, bottom: 40, left: 150 };
+            const barHeight = 22;
+            const height = data.length * barHeight + margin.top + margin.bottom;
+            const width = 700;
+
+            const section = document.createElement('div');
+            section.className = 'waterfall-section';
+            section.innerHTML = `
+                <div class="waterfall-title">
+                    ${title}
+                    <span class="pathway-count">${data.length} pathways</span>
+                </div>
+                <div class="waterfall-content" id="${containerId}"></div>
+            `;
+            document.getElementById('waterfalls').appendChild(section);
 
             const svg = d3.select(`#${containerId}`)
                 .append('svg')
@@ -412,82 +467,116 @@
             const g = svg.append('g')
                 .attr('transform', `translate(${margin.left},${margin.top})`);
 
-            // Filter data based on threshold
-            const threshold = parseFloat(document.getElementById('thresholdFilter').value);
-            const pathwaySearch = document.getElementById('pathwayFilter').value.toLowerCase();
+            // Scales
+            const maxAbsChange = d3.max(data, d => Math.abs(d.percentChange));
+            const xScale = d3.scaleLinear()
+                .domain([-maxAbsChange, maxAbsChange])
+                .range([0, width - margin.left - margin.right]);
 
-            // Highlight Macrophage column
-            const macIndex = cellTypes.indexOf('Macrophage');
-            if (macIndex !== -1) {
-                g.append('rect')
-                    .attr('class', 'macrophage-column')
-                    .attr('x', macIndex * cellSize)
-                    .attr('y', 0)
-                    .attr('width', cellSize)
-                    .attr('height', pathways.length * cellSize);
-            }
+            const yScale = d3.scaleBand()
+                .domain(data.map(d => d.pathway))
+                .range([0, data.length * barHeight])
+                .padding(0.15);
 
-            // Draw cells
-            pathways.forEach((pathway, i) => {
-                if (pathwaySearch && !pathway.toLowerCase().includes(pathwaySearch)) return;
+            // Zero line
+            g.append('line')
+                .attr('class', 'zero-line')
+                .attr('x1', xScale(0))
+                .attr('x2', xScale(0))
+                .attr('y1', 0)
+                .attr('y2', data.length * barHeight);
 
-                cellTypes.forEach((cellType, j) => {
-                    const row = data.find(d => d[''] === pathway);
-                    const value = row ? parseFloat(row[cellType]) : NaN;
+            // Bars
+            g.selectAll('.bar')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('class', d => `bar pathway-${d.pathway.replace(/[^a-zA-Z0-9]/g, '_')}`)
+                .attr('x', d => d.percentChange > 0 ? xScale(0) : xScale(d.percentChange))
+                .attr('y', d => yScale(d.pathway))
+                .attr('width', d => Math.abs(xScale(d.percentChange) - xScale(0)))
+                .attr('height', yScale.bandwidth())
+                .attr('fill', d => d.percentChange > 0 ? '#10b981' : '#ef4444')
+                .on('mouseover', (event, d) => showTooltip(event, d))
+                .on('mouseout', hideTooltip)
+                .on('click', (event, d) => selectPathway(d.pathway));
 
-                    if (isNaN(value) || value < threshold) return;
-
-                    g.append('rect')
-                        .attr('class', `cell pathway-${pathway.replace(/[^a-zA-Z0-9]/g, '_')}`)
-                        .attr('x', j * cellSize)
-                        .attr('y', i * cellSize)
-                        .attr('width', cellSize)
-                        .attr('height', cellSize)
-                        .attr('fill', colorScale(value))
-                        .attr('stroke', '#fff')
-                        .attr('stroke-width', 0.5)
-                        .on('mouseover', (event) => showTooltip(event, pathway, cellType, value))
-                        .on('mouseout', hideTooltip)
-                        .on('click', () => selectPathway(pathway));
-                });
-            });
-
-            // X-axis (cell types)
-            g.selectAll('.cell-label')
-                .data(cellTypes)
+            // Value labels
+            g.selectAll('.value-label')
+                .data(data)
                 .enter()
                 .append('text')
-                .attr('class', 'axis axis-label')
-                .attr('x', (d, i) => i * cellSize + cellSize / 2)
-                .attr('y', pathways.length * cellSize + 15)
-                .attr('text-anchor', 'start')
-                .attr('transform', (d, i) => `rotate(45, ${i * cellSize + cellSize / 2}, ${pathways.length * cellSize + 15})`)
-                .text(d => d)
-                .style('font-weight', d => d === 'Macrophage' ? 'bold' : 'normal')
-                .style('fill', d => d === 'Macrophage' ? '#b45309' : '#4a5568');
+                .attr('class', 'value-display')
+                .attr('x', d => d.percentChange > 0 ?
+                    xScale(d.percentChange) + 5 : xScale(d.percentChange) - 5)
+                .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 4)
+                .attr('text-anchor', d => d.percentChange > 0 ? 'start' : 'end')
+                .attr('fill', '#1a202c')
+                .text(d => `${d.percentChange > 0 ? '+' : ''}${d.percentChange.toFixed(1)}%`);
 
-            // Y-axis (pathways - only show filtered)
-            const filteredPathways = pathways.filter(p => !pathwaySearch || p.toLowerCase().includes(pathwaySearch));
+            // Y-axis (pathway labels)
             g.selectAll('.pathway-label')
-                .data(filteredPathways)
+                .data(data)
                 .enter()
                 .append('text')
                 .attr('class', 'axis')
-                .attr('x', -5)
-                .attr('y', (d, i) => pathways.indexOf(d) * cellSize + cellSize / 2 + 4)
+                .attr('x', -10)
+                .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 4)
                 .attr('text-anchor', 'end')
-                .text(d => d)
-                .style('font-size', '10px');
+                .text(d => d.pathway)
+                .style('font-size', '10px')
+                .style('cursor', 'pointer')
+                .on('click', (event, d) => selectPathway(d.pathway));
+
+            // X-axis
+            const xAxis = d3.axisBottom(xScale)
+                .ticks(5)
+                .tickFormat(d => `${d}%`);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${data.length * barHeight})`)
+                .call(xAxis);
+
+            // X-axis label
+            g.append('text')
+                .attr('class', 'axis-label')
+                .attr('x', (width - margin.left - margin.right) / 2)
+                .attr('y', data.length * barHeight + 35)
+                .attr('text-anchor', 'middle')
+                .text('% Change (LM vs AN)');
         }
 
-        function showTooltip(event, pathway, cellType, value) {
+        function showTooltip(event, d) {
             const tooltip = document.getElementById('tooltip');
             tooltip.innerHTML = `
-                <strong>${pathway}</strong><br/>
-                Cell Type: ${cellType}<br/>
-                Probability: ${value.toFixed(3)}
+                <div class="tooltip-pathway">${d.pathway}</div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Adjacent Normal:</span>
+                    <span class="tooltip-value">${d.an.toFixed(3)}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Liver Metastasis:</span>
+                    <span class="tooltip-value">${d.lm.toFixed(3)}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Change:</span>
+                    <span class="tooltip-value" style="color: ${d.change > 0 ? '#10b981' : '#ef4444'}">
+                        ${d.change > 0 ? '+' : ''}${d.change.toFixed(3)}
+                    </span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">% Change:</span>
+                    <span class="tooltip-value" style="color: ${d.percentChange > 0 ? '#10b981' : '#ef4444'}">
+                        ${d.percentChange > 0 ? '+' : ''}${d.percentChange.toFixed(1)}%
+                    </span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Fold Change:</span>
+                    <span class="tooltip-value">${d.foldChange === Infinity ? '∞' : d.foldChange.toFixed(2)}x</span>
+                </div>
             `;
-            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.left = (event.pageX + 15) + 'px';
             tooltip.style.top = (event.pageY - 10) + 'px';
             tooltip.classList.add('show');
         }
@@ -498,36 +587,23 @@
 
         function selectPathway(pathway) {
             selectedPathway = pathway;
-
-            // Highlight all cells for this pathway
-            d3.selectAll('.cell').classed('highlighted', false);
+            d3.selectAll('.bar').classed('highlighted', false);
             d3.selectAll(`.pathway-${pathway.replace(/[^a-zA-Z0-9]/g, '_')}`).classed('highlighted', true);
-
-            // Show info panel
-            const infoPanel = document.getElementById('infoPanel');
-            const infoTitle = document.getElementById('infoTitle');
-            const infoContent = document.getElementById('infoContent');
-
-            infoTitle.textContent = `Selected Pathway: ${pathway}`;
-            infoContent.innerHTML = `Click anywhere on the heatmaps to see details for this pathway across all conditions and cell types.`;
-
-            infoPanel.classList.add('active');
         }
 
         function resetFilters() {
-            document.getElementById('pathwayFilter').value = '';
-            document.getElementById('thresholdFilter').value = '0';
-            document.getElementById('cellTypeFilter').value = 'Macrophage';
+            document.getElementById('minChange').value = '10';
+            document.getElementById('topN').value = '30';
+            document.getElementById('direction').value = 'all';
             selectedPathway = null;
-            d3.selectAll('.cell').classed('highlighted', false);
-            document.getElementById('infoPanel').classList.remove('active');
-            renderAllHeatmaps();
+            d3.selectAll('.bar').classed('highlighted', false);
+            renderWaterfalls();
         }
 
-        // Event listeners for filters
-        document.getElementById('pathwayFilter').addEventListener('input', () => renderAllHeatmaps());
-        document.getElementById('thresholdFilter').addEventListener('change', () => renderAllHeatmaps());
-        document.getElementById('cellTypeFilter').addEventListener('change', () => renderAllHeatmaps());
+        // Event listeners
+        document.getElementById('minChange').addEventListener('change', renderWaterfalls);
+        document.getElementById('topN').addEventListener('change', renderWaterfalls);
+        document.getElementById('direction').addEventListener('change', renderWaterfalls);
 
         // Initialize
         loadData();

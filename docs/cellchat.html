@@ -386,6 +386,13 @@
                 </select>
             </div>
 
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="compiled" onchange="renderComparisonWaterfalls()">
+                    Compiled View
+                </label>
+            </div>
+
             <button class="btn" onclick="resetFilters()">Reset Filters</button>
         </div>
 
@@ -878,29 +885,37 @@
             const incomingFiltered = applyFilters(comparisonResults.incoming);
             const outgoingFiltered = applyFilters(comparisonResults.outgoing);
 
+            // Check if compiled mode is enabled
+            const isCompiled = document.getElementById('compiled').checked;
 
+            if (isCompiled) {
+                // Compiled view: 2 plots (incoming, outgoing) with grouped bars
+                renderCompiledView(container, incomingFiltered, 'Incoming Pathways');
+                renderCompiledView(container, outgoingFiltered, 'Outgoing Pathways');
+            } else {
+                // Standard view: 4 plots (mouse incoming/outgoing, human incoming/outgoing)
+                // Grid container for side-by-side waterfalls
+                const gridContainer = document.createElement('div');
+                gridContainer.style.display = 'grid';
+                gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                gridContainer.style.gap = '30px';
+                gridContainer.style.marginBottom = '40px';
 
-            // Grid container for side-by-side waterfalls
-            const gridContainer = document.createElement('div');
-            gridContainer.style.display = 'grid';
-            gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
-            gridContainer.style.gap = '30px';
-            gridContainer.style.marginBottom = '40px';
+                // Render incoming comparison
+                renderComparisonPair(gridContainer, incomingFiltered, 'Incoming Pathways');
 
-            // Render incoming comparison
-            renderComparisonPair(gridContainer, incomingFiltered, 'Incoming Pathways');
+                container.appendChild(gridContainer);
 
-            container.appendChild(gridContainer);
+                // Render outgoing comparison
+                const gridContainer2 = document.createElement('div');
+                gridContainer2.style.display = 'grid';
+                gridContainer2.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                gridContainer2.style.gap = '30px';
 
-            // Render outgoing comparison
-            const gridContainer2 = document.createElement('div');
-            gridContainer2.style.display = 'grid';
-            gridContainer2.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
-            gridContainer2.style.gap = '30px';
+                renderComparisonPair(gridContainer2, outgoingFiltered, 'Outgoing Pathways');
 
-            renderComparisonPair(gridContainer2, outgoingFiltered, 'Outgoing Pathways');
-
-            container.appendChild(gridContainer2);
+                container.appendChild(gridContainer2);
+            }
         }
 
         function renderComparisonPair(container, data, title) {
@@ -1056,6 +1071,211 @@
                 .attr('transform', `translate(0,${data.length * barHeight})`)
                 .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + '%'))
                 .style('font-size', '12px');
+        }
+
+        // COMPILED VIEW FUNCTIONS
+        function renderCompiledView(container, data, title) {
+            if (data.length === 0) {
+                const noData = document.createElement('div');
+                noData.innerHTML = `<div class="loading">No pathways match filters for ${title}</div>`;
+                container.appendChild(noData);
+                return;
+            }
+
+            // Sort by absolute mouse change (descending)
+            const sorted = [...data].sort((a, b) => b.mouseChange - a.mouseChange);
+
+            // Create section
+            const section = document.createElement('div');
+            section.className = 'waterfall-section';
+            section.style.marginBottom = '40px';
+            section.innerHTML = `
+                <div class="waterfall-title">
+                    Cross-Species Comparison - ${title}
+                    <span class="pathway-count">${sorted.length} pathways</span>
+                </div>
+            `;
+
+            renderCompiledWaterfall(section, sorted);
+            container.appendChild(section);
+        }
+
+        function renderCompiledWaterfall(container, data) {
+            const margin = { top: 60, right: 100, bottom: 40, left: 160 };
+            const barHeight = 12; // Height per bar (2 bars per pathway = 24px total)
+            const groupPadding = 4; // Padding between bars in a group
+            const groupHeight = (barHeight * 2) + groupPadding;
+            const height = data.length * groupHeight + margin.top + margin.bottom;
+            const width = 700;
+
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', '100%')
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .style('max-width', '100%')
+                .style('height', 'auto');
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Get all changes for scale
+            const allChanges = data.flatMap(d => [d.mouseChange, d.humanChange]);
+            const maxAbs = d3.max(allChanges.map(Math.abs)) || 100;
+
+            const x = d3.scaleLinear()
+                .domain([-maxAbs, maxAbs])
+                .range([0, width - margin.left - margin.right]);
+
+            const y = d3.scaleLinear()
+                .domain([0, data.length])
+                .range([0, data.length * groupHeight]);
+
+            // Add legend at the top
+            const legend = svg.append('g')
+                .attr('transform', `translate(${margin.left}, 20)`);
+
+            legend.append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', 14)
+                .attr('height', 14)
+                .attr('fill', '#3b82f6')
+                .attr('opacity', 0.8);
+
+            legend.append('text')
+                .attr('x', 20)
+                .attr('y', 12)
+                .style('font-size', '13px')
+                .style('fill', '#f1f5f9')
+                .text('Human (LM vs AN)');
+
+            legend.append('rect')
+                .attr('x', 180)
+                .attr('y', 0)
+                .attr('width', 14)
+                .attr('height', 14)
+                .attr('fill', '#f97316')
+                .attr('opacity', 0.8);
+
+            legend.append('text')
+                .attr('x', 200)
+                .attr('y', 12)
+                .style('font-size', '13px')
+                .style('fill', '#f1f5f9')
+                .text('Mouse (WT vs sgp130)');
+
+            // Mouse bars (top bar in each group)
+            g.selectAll('.bar-mouse')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar bar-mouse')
+                .attr('x', d => d.mouseChange < 0 ? x(d.mouseChange) : x(0))
+                .attr('y', (d, i) => y(i))
+                .attr('width', d => Math.abs(x(d.mouseChange) - x(0)))
+                .attr('height', barHeight)
+                .attr('fill', '#f97316') // Orange for mouse
+                .attr('opacity', 0.8)
+                .on('click', (event, d) => selectPathway(d.pathway))
+                .on('mouseover', (event, d) => showCompiledTooltip(event, d, 'mouse'))
+                .on('mouseout', hideTooltip);
+
+            // Human bars (bottom bar in each group)
+            g.selectAll('.bar-human')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar bar-human')
+                .attr('x', d => d.humanChange < 0 ? x(d.humanChange) : x(0))
+                .attr('y', (d, i) => y(i) + barHeight + groupPadding)
+                .attr('width', d => Math.abs(x(d.humanChange) - x(0)))
+                .attr('height', barHeight)
+                .attr('fill', '#3b82f6') // Blue for human
+                .attr('opacity', 0.8)
+                .on('click', (event, d) => selectPathway(d.pathway))
+                .on('mouseover', (event, d) => showCompiledTooltip(event, d, 'human'))
+                .on('mouseout', hideTooltip);
+
+            // Pathway labels (one per group, centered vertically)
+            g.selectAll('.label')
+                .data(data)
+                .enter()
+                .append('text')
+                .attr('class', 'label')
+                .attr('x', -60)
+                .attr('y', (d, i) => y(i) + groupHeight / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', 'end')
+                .style('font-size', '11px')
+                .style('fill', '#f1f5f9')
+                .style('font-weight', '500')
+                .text(d => d.pathway);
+
+            // Value labels for mouse
+            g.selectAll('.value-mouse')
+                .data(data)
+                .enter()
+                .append('text')
+                .attr('class', 'value-mouse')
+                .attr('x', d => d.mouseChange > 0 ? x(d.mouseChange) + 5 : x(d.mouseChange) - 5)
+                .attr('y', (d, i) => y(i) + barHeight / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', d => d.mouseChange > 0 ? 'start' : 'end')
+                .style('font-size', '10px')
+                .style('fill', '#f1f5f9')
+                .style('font-weight', '600')
+                .text(d => (d.mouseChange > 0 ? '+' : '') + d.mouseChange.toFixed(1) + '%');
+
+            // Value labels for human
+            g.selectAll('.value-human')
+                .data(data)
+                .enter()
+                .append('text')
+                .attr('class', 'value-human')
+                .attr('x', d => d.humanChange > 0 ? x(d.humanChange) + 5 : x(d.humanChange) - 5)
+                .attr('y', (d, i) => y(i) + barHeight + groupPadding + barHeight / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', d => d.humanChange > 0 ? 'start' : 'end')
+                .style('font-size', '10px')
+                .style('fill', '#f1f5f9')
+                .style('font-weight', '600')
+                .text(d => (d.humanChange > 0 ? '+' : '') + d.humanChange.toFixed(1) + '%');
+
+            // Zero line
+            g.append('line')
+                .attr('x1', x(0))
+                .attr('x2', x(0))
+                .attr('y1', 0)
+                .attr('y2', data.length * groupHeight)
+                .attr('stroke', '#475569')
+                .attr('stroke-width', 2);
+
+            // X-axis
+            g.append('g')
+                .attr('transform', `translate(0,${data.length * groupHeight})`)
+                .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + '%'))
+                .style('font-size', '12px');
+        }
+
+        function showCompiledTooltip(event, d, species) {
+            const tooltip = document.getElementById('tooltip');
+            const change = species === 'mouse' ? d.mouseChange : d.humanChange;
+            const speciesLabel = species === 'mouse' ? 'Mouse (WT vs sgp130)' : 'Human (LM vs AN)';
+            const baseline = species === 'mouse' ? d.mouseSgp : d.humanAN;
+            const target = species === 'mouse' ? d.mouseWT : d.humanLM;
+            const baselineLabel = species === 'mouse' ? 'sgp130' : 'AN';
+            const targetLabel = species === 'mouse' ? 'WT' : 'LM';
+
+            tooltip.innerHTML = `
+                <strong>${d.pathway}</strong><br>
+                <strong>${speciesLabel}:</strong><br>
+                ${baselineLabel}: ${baseline.toFixed(3)}<br>
+                ${targetLabel}: ${target.toFixed(3)}<br>
+                Change: ${(change > 0 ? '+' : '')}${change.toFixed(1)}%
+            `;
+            tooltip.style.left = event.pageX + 10 + 'px';
+            tooltip.style.top = event.pageY + 10 + 'px';
+            tooltip.classList.add('show');
         }
 
         function showComparisonTooltip(event, d, species) {

@@ -394,6 +394,13 @@
                 </label>
             </div>
 
+            <div class="control-group" id="concordantGroup" style="display:none; margin-top: 10px;">
+                <label title="Show pathways where sgp130 and Human change in the SAME direction">
+                    <input type="checkbox" id="concordantMode">
+                    Show Concordant (Same Direction)
+                </label>
+            </div>
+
             <button class="btn" onclick="resetFilters()">Reset Filters</button>
         </div>
 
@@ -671,8 +678,14 @@
                 const humanInAN = getComparisonCellValue(comparisonDatasets.human.incomingAN, pathway, selectedCellType, 'human');
                 const humanInChange = humanInAN !== 0 ? ((humanInLM - humanInAN) / humanInAN) * 100 : 0;
 
-                // Check if opposite directions
-                if ((mouseInChange < 0 && humanInChange > 0) || (mouseInChange > 0 && humanInChange < 0)) {
+                // Categorize
+                let category = null;
+                if (mouseInChange < 0 && humanInChange > 0) category = 'il6-dependent'; // Inverse 1
+                else if (mouseInChange > 0 && humanInChange < 0) category = 'anti-tumor'; // Inverse 2
+                else if (mouseInChange > 0 && humanInChange > 0) category = 'concordant-up'; // Same Up
+                else if (mouseInChange < 0 && humanInChange < 0) category = 'concordant-down'; // Same Down
+
+                if (category) {
                     comparisonResults.incoming.push({
                         pathway,
                         mouseChange: mouseInChange,
@@ -681,7 +694,7 @@
                         mouseSgp: mouseInSgp,
                         humanLM: humanInLM,
                         humanAN: humanInAN,
-                        category: mouseInChange < 0 && humanInChange > 0 ? 'il6-dependent' : 'anti-tumor'
+                        category: category
                     });
                 }
             });
@@ -696,7 +709,13 @@
                 const humanOutAN = getComparisonCellValue(comparisonDatasets.human.outgoingAN, pathway, selectedCellType, 'human');
                 const humanOutChange = humanOutAN !== 0 ? ((humanOutLM - humanOutAN) / humanOutAN) * 100 : 0;
 
-                if ((mouseOutChange < 0 && humanOutChange > 0) || (mouseOutChange > 0 && humanOutChange < 0)) {
+                let category = null;
+                if (mouseOutChange < 0 && humanOutChange > 0) category = 'il6-dependent';
+                else if (mouseOutChange > 0 && humanOutChange < 0) category = 'anti-tumor';
+                else if (mouseOutChange > 0 && humanOutChange > 0) category = 'concordant-up';
+                else if (mouseOutChange < 0 && humanOutChange < 0) category = 'concordant-down';
+
+                if (category) {
                     comparisonResults.outgoing.push({
                         pathway,
                         mouseChange: mouseOutChange,
@@ -705,7 +724,7 @@
                         mouseSgp: mouseOutSgp,
                         humanLM: humanOutLM,
                         humanAN: humanOutAN,
-                        category: mouseOutChange < 0 && humanOutChange > 0 ? 'il6-dependent' : 'anti-tumor'
+                        category: category
                     });
                 }
             });
@@ -865,6 +884,7 @@
             const maxChange = parseFloat(document.getElementById('maxChange').value) || 1000;
             const topN = parseInt(document.getElementById('topN').value) || 50;
             const direction = document.getElementById('direction').value || 'all';
+            const showConcordant = document.getElementById('concordantMode').checked;
 
             function applyFilters(data) {
                 return data.filter(d => {
@@ -875,9 +895,20 @@
                     if (absMouseChange < minChange || absHumanChange < minChange) return false;
                     if (absMouseChange > maxChange || absHumanChange > maxChange) return false;
 
-                    //Direction filter
-                    if (direction === 'gains' && d.category !== 'anti-tumor') return false;
-                    if (direction === 'losses' && d.category !== 'il6-dependent') return false;
+                    // Mode Filter (Inverse vs Concordant)
+                    const isConcordant = d.category.startsWith('concordant');
+                    if (showConcordant && !isConcordant) return false;
+                    if (!showConcordant && isConcordant) return false;
+
+                    //Direction filter (modified for concordant)
+                    if (direction === 'gains') {
+                        if (!showConcordant && d.category !== 'anti-tumor') return false;
+                        if (showConcordant && d.category !== 'concordant-up') return false;
+                    }
+                    if (direction === 'losses') {
+                        if (!showConcordant && d.category !== 'il6-dependent') return false;
+                        if (showConcordant && d.category !== 'concordant-down') return false;
+                    }
 
                     return true;
                 }).slice(0, topN);
@@ -1283,7 +1314,10 @@
             const tooltip = document.getElementById('tooltip');
             const mouseChange = d.mouseChange;
             const humanChange = d.humanChange;
-            const category = d.category === 'il6-dependent' ? 'IL-6 Dependent (↓Mouse, ↑Human)' : 'Anti-tumor (↑Mouse, ↓Human)';
+            const category = d.category === 'il6-dependent' ? 'IL-6 Dependent (↓Mouse, ↑Human)' :
+                d.category === 'anti-tumor' ? 'Anti-tumor (↑Mouse, ↓Human)' :
+                    d.category === 'concordant-up' ? 'Concordant Up (↑Mouse, ↑Human)' :
+                        'Concordant Down (↓Mouse, ↓Human)';
 
             tooltip.innerHTML = `
                 <strong>${d.pathway}</strong><br>
@@ -1521,6 +1555,9 @@
                 document.getElementById('enableCommCell').parentElement.style.display = 'none';
                 document.getElementById('commCellGroup').style.display = 'none';
 
+                // Show Concordant Toggle
+                document.getElementById('concordantGroup').style.display = 'block';
+
                 // Load comparison data
                 await loadComparisonData();
             } else {
@@ -1529,6 +1566,9 @@
 
                 // Show communicating cell filter
                 document.getElementById('enableCommCell').parentElement.style.display = 'block';
+
+                // Hide Concordant Toggle
+                document.getElementById('concordantGroup').style.display = 'none';
 
                 // Reload single species data
                 await loadData();
@@ -1572,6 +1612,7 @@
         document.getElementById('maxChange').addEventListener('change', renderWaterfalls);
         document.getElementById('topN').addEventListener('change', renderWaterfalls);
         document.getElementById('direction').addEventListener('change', renderWaterfalls);
+        document.getElementById('concordantMode').addEventListener('change', renderComparisonWaterfalls);
 
         // Initialize
         loadData();

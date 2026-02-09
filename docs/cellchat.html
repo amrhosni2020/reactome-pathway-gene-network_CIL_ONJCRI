@@ -48,6 +48,7 @@
             font-weight: 700;
             margin-bottom: 8px;
             background: linear-gradient(to right, #818cf8, #c084fc);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             color: #818cf8;
@@ -939,7 +940,7 @@
             mouseSection.className = 'waterfall-section';
             mouseSection.innerHTML = `
                 <div class="waterfall-title">
-                    Mouse (WT vs sgp130) - ${title}
+                    Mouse (sgp130 vs WT) - ${title}
                     <span class="pathway-count">${sorted.length} pathways</span>
                 </div>
             `;
@@ -1162,7 +1163,7 @@
                 .attr('y', 12)
                 .style('font-size', '13px')
                 .style('fill', '#f1f5f9')
-                .text('Mouse (WT vs sgp130)');
+                .text('Mouse (sgp130 vs WT)');
 
             // Mouse bars (top bar in each group)
             g.selectAll('.bar-mouse')
@@ -1260,7 +1261,7 @@
         function showCompiledTooltip(event, d, species) {
             const tooltip = document.getElementById('tooltip');
             const change = species === 'mouse' ? d.mouseChange : d.humanChange;
-            const speciesLabel = species === 'mouse' ? 'Mouse (WT vs sgp130)' : 'Human (LM vs AN)';
+            const speciesLabel = species === 'mouse' ? 'Mouse (sgp130 vs WT)' : 'Human (LM vs AN)';
             const baseline = species === 'mouse' ? d.mouseSgp : d.humanAN;
             const target = species === 'mouse' ? d.mouseWT : d.humanLM;
             const baselineLabel = species === 'mouse' ? 'sgp130' : 'AN';
@@ -1287,7 +1288,7 @@
             tooltip.innerHTML = `
                 <strong>${d.pathway}</strong><br>
                 <strong>Category:</strong> ${category}<br><br>
-                <strong>Mouse (WT/sgp130):</strong><br>
+                <strong>Mouse (sgp130/WT):</strong><br>
                 sgp130: ${d.mouseSgp.toFixed(3)}<br>
                 WT: ${d.mouseWT.toFixed(3)}<br>
                 Change: ${(mouseChange > 0 ? '+' : '')}${mouseChange.toFixed(1)}%<br><br>

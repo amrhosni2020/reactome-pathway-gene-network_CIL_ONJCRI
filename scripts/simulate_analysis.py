@@ -135,6 +135,20 @@ final_json = {
     "inversion_genes": inv_genes
 }
 
+# Sanitize for JSON (NaN -> None)
+def sanitize_for_json(obj):
+    if isinstance(obj, float):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return obj
+    elif isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(x) for x in obj]
+    return obj
+
+final_json = sanitize_for_json(final_json)
+
 out_path = os.path.join(DATA_DIR, "combined_analysis.json")
 with open(out_path, 'w') as f:
     json.dump(final_json, f, indent=2)

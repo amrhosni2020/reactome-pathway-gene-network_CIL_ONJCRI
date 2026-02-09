@@ -327,7 +327,8 @@
         let currentPathway = null;
 
         // Load Data
-        d3.json('./data/combined_analysis.json').then(data => {
+        // Load Data (with cache busting)
+        d3.json(`./data/combined_analysis.json?t=${new Date().getTime()}`).then(data => {
             rawData = data;
             document.getElementById('loader').style.display = 'none';
 

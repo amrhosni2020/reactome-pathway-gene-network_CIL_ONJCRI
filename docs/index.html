@@ -200,14 +200,32 @@
 
         <div class="description">
             <p>
-                Explore two complementary visualizations examining macrophage IL-6 trans-signaling in colorectal cancer
+                Explore three complementary visualizations examining macrophage IL-6 trans-signaling in colorectal
+                cancer
                 liver metastasis.
-                These tools integrate mouse CRC experiments with human metastasis data to identify key pathways and
-                cell-cell communication patterns.
+                These tools integrate mouse CRC experiments with human metastasis data to identify key pathways,
+                cell-cell communication patterns, and transcriptional inversion signatures.
             </p>
         </div>
 
         <div class="cards">
+            <!-- Combined Analysis Card (NEW) -->
+            <div class="card" onclick="window.location.href='combined_analysis.html'">
+                <div class="card-title">Combined Analysis Dashboard</div>
+                <div class="card-description">
+                    <strong>The Integrated View ✨</strong>: Directly connects CellChat signalling pathways to real
+                    transcriptional inversion genes (sgp130-down / human-up) and Reactome functional processes.
+                </div>
+                <ul class="card-features">
+                    <li>3rd Generation Integration</li>
+                    <li>Automatic Inversion Gene Detection</li>
+                    <li>Integrated Reactome Mapping</li>
+                    <li>Sgp130 vs Human directional consistency</li>
+                    <li>Searchable Network Explorer</li>
+                </ul>
+                <a href="combined_analysis.html" class="btn">View Integrated Results →</a>
+            </div>
+
             <!-- Reactome Card -->
             <div class="card" onclick="window.location.href='reactome.html'">
                 <div class="card-title">Reactome Pathway Network</div>
@@ -230,7 +248,7 @@
                 <div class="card-title">CellChat Communication Analysis</div>
                 <div class="card-description">
                     Cross-species pathway comparison dashboard with split waterfall plots showing cell-cell
-                    communication changes between Human (LM vs AN) and Mouse (WT vs sgp130) metastasis models.
+                    communication changes between Human (LM vs AN) and Mouse (sgp130 vs WT) metastasis models.
                 </div>
                 <ul class="card-features">
                     <li>Human vs Mouse comparison</li>

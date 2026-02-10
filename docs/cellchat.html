@@ -669,9 +669,10 @@
             // Calculate for incoming
             sharedPathways.forEach(pathway => {
                 // Mouse changes (WT vs sgp130)
+                // Mouse: sgp130 vs WT (WT is baseline)
                 const mouseInWT = getComparisonCellValue(comparisonDatasets.mouse.incomingLM, pathway, selectedCellType, 'mouse');
                 const mouseInSgp = getComparisonCellValue(comparisonDatasets.mouse.incomingAN, pathway, selectedCellType, 'mouse');
-                const mouseInChange = mouseInSgp !== 0 ? ((mouseInWT - mouseInSgp) / mouseInSgp) * 100 : 0;
+                const mouseInChange = mouseInWT !== 0 ? ((mouseInSgp - mouseInWT) / mouseInWT) * 100 : 0;
 
                 // Human changes (LM vs AN)
                 const humanInLM = getComparisonCellValue(comparisonDatasets.human.incomingLM, pathway, selectedCellType, 'human');
@@ -703,7 +704,8 @@
             sharedPathways.forEach(pathway => {
                 const mouseOutWT = getComparisonCellValue(comparisonDatasets.mouse.outgoingLM, pathway, selectedCellType, 'mouse');
                 const mouseOutSgp = getComparisonCellValue(comparisonDatasets.mouse.outgoingAN, pathway, selectedCellType, 'mouse');
-                const mouseOutChange = mouseOutSgp !== 0 ? ((mouseOutWT - mouseOutSgp) / mouseOutSgp) * 100 : 0;
+                // Mouse: sgp130 vs WT (WT is baseline)
+                const mouseOutChange = mouseOutWT !== 0 ? ((mouseOutSgp - mouseOutWT) / mouseOutWT) * 100 : 0;
 
                 const humanOutLM = getComparisonCellValue(comparisonDatasets.human.outgoingLM, pathway, selectedCellType, 'human');
                 const humanOutAN = getComparisonCellValue(comparisonDatasets.human.outgoingAN, pathway, selectedCellType, 'human');

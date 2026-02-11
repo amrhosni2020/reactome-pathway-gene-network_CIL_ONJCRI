@@ -314,7 +314,8 @@
     <div class="container">
         <header>
             <h1>CellChat Pathway Analysis</h1>
-            <div class="subtitle">Cell-Cell Communication: Liver Metastasis vs Adjacent Normal</div>
+            <div class="subtitle" id="comparisonSubtitle">Cell-Cell Communication: Liver Metastasis vs Adjacent Normal
+            </div>
         </header>
 
 
@@ -851,6 +852,15 @@
             const selectedCellType = document.getElementById('cellType').value;
             const commCellEnabled = document.getElementById('enableCommCell').checked;
             const commCell = document.getElementById('commCell').value;
+            const species = document.getElementById('species').value;
+
+            // Update Subtitle based on species
+            const subtitle = document.getElementById('comparisonSubtitle');
+            if (species === 'mouse') {
+                subtitle.textContent = 'Cell-Cell Communication: sgp130 vs WT (Mouse)';
+            } else {
+                subtitle.textContent = 'Cell-Cell Communication: Liver Metastasis vs Adjacent Normal';
+            }
 
             const incomingFiltered = filterData(cellTypeChanges.incoming);
             const outgoingFiltered = filterData(cellTypeChanges.outgoing);
@@ -875,6 +885,10 @@
         function renderComparisonWaterfalls() {
             const container = document.getElementById('waterfalls');
             container.innerHTML = '';
+
+            // Update Subtitle for Comparison Mode
+            const subtitle = document.getElementById('comparisonSubtitle');
+            subtitle.textContent = 'Cell-Cell Communication: Cross-Species Comparison';
 
             if (!comparisonResults || !comparisonResults.incoming) {
                 container.innerHTML = '<div class="loading">Please select a cell type to begin comparison</div>';
@@ -1448,24 +1462,31 @@
                 .call(xAxis);
 
             // X-axis label
+            const species = document.getElementById('species').value;
+            const xLabel = species === 'mouse' ? '% Change (sgp130 vs WT)' : '% Change (LM vs AN)';
+
             g.append('text')
                 .attr('class', 'axis-label')
                 .attr('x', (width - margin.left - margin.right) / 2)
                 .attr('y', data.length * barHeight + 35)
                 .attr('text-anchor', 'middle')
-                .text('% Change (LM vs AN)');
+                .text(xLabel);
         }
 
         function showTooltip(event, d) {
+            const species = document.getElementById('species').value;
+            const label1 = species === 'mouse' ? 'WT' : 'Adjacent Normal';
+            const label2 = species === 'mouse' ? 'sgp130' : 'Liver Metastasis';
+
             const tooltip = document.getElementById('tooltip');
             tooltip.innerHTML = `
                 <div class="tooltip-pathway">${d.pathway}</div>
                 <div class="tooltip-row">
-                    <span class="tooltip-label">Adjacent Normal:</span>
+                    <span class="tooltip-label">${label1}:</span>
                     <span class="tooltip-value">${d.an.toFixed(3)}</span>
                 </div>
                 <div class="tooltip-row">
-                    <span class="tooltip-label">Liver Metastasis:</span>
+                    <span class="tooltip-label">${label2}:</span>
                     <span class="tooltip-value">${d.lm.toFixed(3)}</span>
                 </div>
                 <div class="tooltip-row">

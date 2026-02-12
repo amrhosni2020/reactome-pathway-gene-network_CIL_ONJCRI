@@ -283,8 +283,9 @@
                 const hubs = row.Hubs ? row.Hubs.split(',').map(s => s.trim()) : [];
 
                 // 1. Source -> Process
-                // Split source node by process to ensure vertical alignment (stacking)
-                const srcIdx = addNode(sourceName, sourceName, 'source_' + processName);
+                // 1. Source -> Process
+                // Consolidated source node for each category
+                const srcIdx = addNode(sourceName, sourceName, 'source');
                 const procIdx = addNode(processName, sourceName, 'process'); // Inherit category color
 
                 // Link value = number of genes supporting this process

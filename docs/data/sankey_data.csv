@@ -8,4 +8,4 @@ Source,Process,Genes,Hubs
 (Anti-Tumour),Differentiation Control,"MITF, TFEC",NOTCH
 (Metabolism),Glycolytic Shift (Warburg),"SLC2A1, HK2, PFKP, PKM",Glycolysis (Supporting)
 (Metabolism),Lipid Metabolism (Foamy TAMs),"FABP5, PLIN2, ABHD5",Fatty Acid Metabolism (Supporting)
-(Metabolism),Angiogenesis Support,VEGFA,ANGPT (Tie2 signaling)
+(Metabolism),Angiogenesis Support,VEGFA,ANGPT (Tie2)

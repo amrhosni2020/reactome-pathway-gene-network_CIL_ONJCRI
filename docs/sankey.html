@@ -224,7 +224,7 @@
 
     <header>
         <div>
-            <h1>Effect → Process → Gene → CellChat Pathway</h1>
+            <h1>Effect → Process → CellChat Pathway → Gene</h1>
             <div class="subtitle">Mapping Gene Signatures to Functional Hubs</div>
         </div>
         <a href="index.html" class="back-link">← Back to Dashboard</a>
@@ -380,15 +380,15 @@
 
                 links.push({ source: srcIdx, target: procIdx, value: genes.length || 1 });
 
-                // 2. Process -> Gene
-                genes.forEach(gene => {
-                    const geneIdx = addNode(gene, sourceName, "gene");
-                    links.push({ source: procIdx, target: geneIdx, value: 1 });
+                // 2. Process -> Hub (CellChat Pathway)
+                hubs.forEach(hub => {
+                    const hubIdx = addNode(hub, sourceName, "hub");
+                    links.push({ source: procIdx, target: hubIdx, value: genes.length || 1 }); // Link weight based on associated genes
 
-                    // 3. Gene -> Hub
-                    hubs.forEach(hub => {
-                        const hubIdx = addNode(hub, sourceName, "hub");
-                        links.push({ source: geneIdx, target: hubIdx, value: 1 });
+                    // 3. Hub -> Gene
+                    genes.forEach(gene => {
+                        const geneIdx = addNode(gene, sourceName, "gene");
+                        links.push({ source: hubIdx, target: geneIdx, value: 1 });
                     });
                 });
             });
@@ -497,8 +497,8 @@
             if (uniqueX.length >= 4) {
                 drawHeader(headerG, uniqueX[0], "Effect", "");
                 drawHeader(headerG, uniqueX[1], "Process", "");
-                drawHeader(headerG, uniqueX[2], "Gene", "(scRNAseq: Reactome)");
-                drawHeader(headerG, uniqueX[3], "CellChat Pathway", "(CellChat Pathways)");
+                drawHeader(headerG, uniqueX[2], "CellChat Pathway", "(CellChat Pathways)");
+                drawHeader(headerG, uniqueX[3], "Gene", "(scRNAseq: Reactome)");
             }
         }
 

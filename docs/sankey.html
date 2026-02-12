@@ -10,11 +10,11 @@
     <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --panel-bg: #1e293b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border-color: #334155;
+            --bg-color: #ffffff;
+            --panel-bg: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
             --accent-color: #3b82f6;
         }
 
@@ -68,7 +68,7 @@
         }
 
         .back-link:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.05);
             color: var(--text-primary);
         }
 
@@ -116,13 +116,13 @@
             gap: 10px;
             cursor: pointer;
             padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.05);
             border-radius: 6px;
             transition: background 0.2s;
         }
 
         .checkbox-wrapper:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.1);
         }
 
         input[type="checkbox"] {
@@ -178,9 +178,11 @@
 
         .node text {
             font-size: 12px;
-            fill: var(--text-primary);
+            font-weight: 600;
+            fill: currentColor;
+            /* Will be overridden by inline style */
             pointer-events: none;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            text-shadow: 0 1px 0px rgba(255, 255, 255, 0.8);
         }
 
         .legend {
@@ -414,7 +416,7 @@
             const sankey = d3.sankey()
                 .nodeWidth(15)
                 .nodePadding(nodePad)
-                .extent([[10, 60], [width - 10, height - 20]]) // Top margin for headers
+                .extent([[100, 60], [width - 100, height - 20]]) // Increased side margins to fix truncation
                 .nodeId(d => d.index); // Use index for linking
 
             // Deep copy data for layout (d3 modifies it)
@@ -447,7 +449,25 @@
                 .data(graph.nodes)
                 .join("g")
                 .attr("class", "node")
-                .attr("transform", d => `translate(${d.x0},${d.y0})`);
+                .attr("transform", d => `translate(${d.x0},${d.y0})`)
+                .call(d3.drag()
+                    .subject(d => d)
+                    .on("start", function () { this.parentNode.appendChild(this); })
+                    .on("drag", dragmod));
+
+            function dragmod(event, d) {
+                const rectY = (d.y1 - d.y0);
+                // Constrain traversal to height
+                d.y0 = Math.max(0, Math.min(height - rectY, event.y));
+                d.y1 = d.y0 + rectY;
+                d3.select(this).attr("transform", `translate(${d.x0},${d.y0})`);
+
+                // Update layout (recompute links)
+                sankey.update(graph);
+
+                // Redraw links
+                link.attr("d", d3.sankeyLinkHorizontal());
+            }
 
             // Render Logic: Rects vs Circles
             node.each(function (d) {
@@ -484,7 +504,8 @@
                 .attr("dy", "0.35em")
                 .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
                 .text(d => d.name)
-                .style("font-size", d => d.type === "gene" && fcMode ? "10px" : "12px"); // Smaller font in FC mode
+                .style("fill", d => d.color) // Match text color to node color
+                .style("font-size", d => d.type === "gene" && fcMode ? "10px" : "12px");
 
             // 3. Headers (Manual positioning based on layout)
             const headerG = svg.append("g");

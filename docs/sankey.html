@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sankey Diagram | CellChat Analysis</title>
-    <!-- Load Plotly.js from CDN -->
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Load D3.js and d3-sankey -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -109,30 +109,78 @@
             accent-color: var(--accent-color);
         }
 
-        button {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 6px;
+        /* Checkbox Style */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             cursor: pointer;
-            font-weight: 600;
-            transition: transform 0.1s;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            transition: background 0.2s;
         }
 
-        button:active {
-            transform: scale(0.98);
+        .checkbox-wrapper:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
         }
 
         .chart-area {
             flex: 1;
             padding: 20px;
+            overflow: auto;
             position: relative;
         }
 
-        #sankeyDiv {
+        #sankeySvg {
             width: 100%;
             height: 100%;
+            min-height: 600px;
+        }
+
+        .node rect {
+            cursor: pointer;
+            fill-opacity: 0.9;
+        }
+
+        .node rect:hover {
+            fill-opacity: 1;
+            stroke: white;
+            stroke-width: 1px;
+        }
+
+        .node circle {
+            cursor: pointer;
+            stroke: #fff;
+            stroke-width: 1px;
+        }
+
+        .node circle:hover {
+            stroke-width: 2px;
+        }
+
+        .link {
+            fill: none;
+            stroke-opacity: 0.3;
+            transition: stroke-opacity 0.2s;
+        }
+
+        .link:hover {
+            stroke-opacity: 0.6;
+        }
+
+        .node text {
+            font-size: 12px;
+            fill: var(--text-primary);
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
         .legend {
@@ -155,6 +203,20 @@
             height: 12px;
             border-radius: 50%;
         }
+
+        /* Column Headers */
+        .column-header {
+            font-size: 14px;
+            font-weight: bold;
+            fill: #94a3b8;
+            text-anchor: middle;
+        }
+
+        .column-sub {
+            font-size: 11px;
+            fill: #64748b;
+            font-weight: normal;
+        }
     </style>
 </head>
 
@@ -162,10 +224,8 @@
 
     <header>
         <div>
-            <div>
-                <h1>Effect → Process → Gene → CellChat Pathway</h1>
-                <div class="subtitle">Mapping Gene Signatures to Functional Hubs</div>
-            </div>
+            <h1>Effect → Process → Gene → CellChat Pathway</h1>
+            <div class="subtitle">Mapping Gene Signatures to Functional Hubs</div>
         </div>
         <a href="index.html" class="back-link">← Back to Dashboard</a>
     </header>
@@ -177,24 +237,32 @@
                 <label>Visualization Controls</label>
                 <div>
                     <span style="font-size:0.8rem; color:var(--text-secondary)">Node Padding</span>
-                    <input type="range" id="nodePad" min="1" max="100" value="15" oninput="updatePlot()">
+                    <input type="range" id="nodePad" min="5" max="50" value="15" oninput="updateChart()">
                 </div>
                 <div>
-                    <span style="font-size:0.8rem; color:var(--text-secondary)">Node Thickness</span>
-                    <input type="range" id="nodeThickness" min="5" max="50" value="20" oninput="updatePlot()">
-                </div>
-                <div>
-                    <span style="font-size:0.8rem; color:var(--text-secondary)">Font Size</span>
-                    <input type="range" id="fontSize" min="8" max="24" value="12" oninput="updatePlot()">
+                    <span style="font-size:0.8rem; color:var(--text-secondary)">Link Opacity</span>
+                    <input type="range" id="linkOpacity" min="0.1" max="0.8" step="0.1" value="0.3"
+                        oninput="updateChart()">
                 </div>
                 <div>
                     <span style="font-size:0.8rem; color:var(--text-secondary)">Chart Height</span>
-                    <input type="range" id="chartHeight" min="400" max="2000" step="50" value="800"
+                    <input type="range" id="chartHeight" min="600" max="2500" step="50" value="800"
                         oninput="resizeChart()">
                 </div>
             </div>
 
-            <div class="legend">
+            <div class="control-group">
+                <label>Features</label>
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="fcMode" onchange="updateChart()">
+                    <div>
+                        <span style="display:block; font-weight:600; font-size:0.9rem;">Fold Change Size</span>
+                        <span style="font-size:0.75rem; color:var(--text-secondary)">Size Genes by Expression FC</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="legend" id="legendContainer">
                 <label style="margin-bottom:10px; display:block">Signature Categories</label>
                 <div class="legend-item">
                     <div class="color-dot" style="background: #e74c3c"></div>
@@ -210,16 +278,35 @@
                 </div>
             </div>
 
-            <div style="margin-top:20px; font-size:0.8rem; color:var(--text-secondary); line-height:1.5">
-                <strong>Data Source:</strong><br>
-                Comparison of Human Liver Metastasis vs Mouse sgp130 Blockade.<br><br>
-                Shows how specific gene clusters drive functional processes which map to CellChat signaling hubs.
+            <!-- Circle Size Legend (Dynamic) -->
+            <div id="fcLegend"
+                style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid var(--border-color)">
+                <label style="margin-bottom:10px; display:block">Log2 Fold Change</label>
+                <div style="display:flex; align-items:center; gap:15px; color:var(--text-secondary); font-size:0.8rem;">
+                    <div style="text-align:center">
+                        <div style="width:6px; height:6px; background:#64748b; border-radius:50%; margin:0 auto 4px;">
+                        </div>Low
+                    </div>
+                    <div style="text-align:center">
+                        <div style="width:12px; height:12px; background:#64748b; border-radius:50%; margin:0 auto 4px;">
+                        </div>Med
+                    </div>
+                    <div style="text-align:center">
+                        <div style="width:20px; height:20px; background:#64748b; border-radius:50%; margin:0 auto 4px;">
+                        </div>High
+                    </div>
+                </div>
             </div>
+
         </div>
 
-        <div class="chart-area">
-            <div id="sankeyDiv"></div>
+        <div class="chart-area" id="chartContainer">
+            <svg id="sankeySvg"></svg>
         </div>
+    </div>
+
+    <div id="tooltip"
+        style="position: absolute; display: none; background: rgba(0, 0, 0, 0.8); color: white; padding: 8px; border-radius: 4px; pointer-events: none; font-size: 12px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
     </div>
 
     <script>
@@ -231,188 +318,213 @@
             "Default": "#64748b"      // Slate 500
         };
 
-        let rawData = [];
+        let sankeyData = { nodes: [], links: [] };
+        let geneFCMap = new Map(); // Gene -> LogFC
 
+        const svg = d3.select("#sankeySvg");
+        const container = document.getElementById("chartContainer");
+        const tooltip = d3.select("#tooltip");
+
+        // --- Data Loading ---
         async function loadData() {
             try {
-                rawData = await d3.csv("data/sankey_data.csv");
-                updatePlot();
+                // Load Sankey Structure
+                const csvData = await d3.csv("data/sankey_data.csv");
+
+                // Load Fold Change Data
+                const fcData = await d3.csv("data/gene_fc.csv");
+                fcData.forEach(d => {
+                    geneFCMap.set(d.gene, Math.abs(parseFloat(d.LogFC) || 0));
+                });
+
+                processData(csvData);
+                updateChart();
+
             } catch (error) {
-                console.error("Error loading data:", error);
-                document.getElementById('sankeyDiv').innerHTML = `<div style="color:red; padding:20px">Error loading data: ${error.message}</div>`;
+                console.error("Error:", error);
+                container.innerHTML = `<div style="color:red; padding:20px">Error: ${error.message}</div>`;
             }
         }
 
-        function updatePlot() {
-            if (!rawData.length) return;
-
-            const nodePad = parseInt(document.getElementById('nodePad').value);
-            const nodeThickness = parseInt(document.getElementById('nodeThickness').value);
-            const fontSize = parseInt(document.getElementById('fontSize').value);
-
-            // --- Build Nodes & Links ---
+        // --- Process Data into Nodes/Links ---
+        function processData(rawData) {
             let nodes = [];
-            let nodeMap = new Map(); // Name -> Index
+            let nodeMap = new Map();
+            let links = [];
 
             function addNode(name, category, type) {
-                const id = `${name}__${type}`; // Unique ID based on type
+                const id = `${name}__${type}`;
                 if (!nodeMap.has(id)) {
                     let color = COLORS.Default;
-
-                    // Determine color based on Category propagation
                     if (category) {
                         if (category.includes("Pro-Tumour")) color = COLORS["Pro-Tumour"];
                         else if (category.includes("Anti-Tumour")) color = COLORS["Anti-Tumour"];
                         else if (category.includes("Metabolic")) color = COLORS["Metabolic"];
                     }
 
-                    nodes.push({
-                        label: name,
-                        color: color
-                    });
+                    nodes.push({ name: name, type: type, category: category, color: color, id: id });
                     nodeMap.set(id, nodes.length - 1);
                 }
                 return nodeMap.get(id);
             }
 
-            let links = [];
-
             rawData.forEach(row => {
-                // Source is the primary category (e.g., Pro-Tumour TAM Signature)
                 const sourceName = row.Source;
                 const processName = row.Process;
-
-                // Clean up lists (remove quotes handled by d3.csv, but split by comma)
-                // d3.csv parses quoted fields automatically, but multiple items are just a string "A, B"
-                const genes = row.Genes ? row.Genes.split(',').map(s => s.trim()) : [];
-                const hubs = row.Hubs ? row.Hubs.split(',').map(s => s.trim()) : [];
+                const genes = row.Genes ? row.Genes.split(',').map(s => s.trim()).filter(s => s) : [];
+                const hubs = row.Hubs ? row.Hubs.split(',').map(s => s.trim()).filter(s => s) : [];
 
                 // 1. Source -> Process
-                // 1. Source -> Process
-                // Consolidated source node for each category
-                const srcIdx = addNode(sourceName, sourceName, 'source');
-                const procIdx = addNode(processName, sourceName, 'process'); // Inherit category color
+                const srcIdx = addNode(sourceName, sourceName, "source");
+                const procIdx = addNode(processName, sourceName, "process");
 
-                // Link value = number of genes supporting this process
-                links.push({
-                    source: srcIdx,
-                    target: procIdx,
-                    value: genes.length || 1,
-                    color: hexToRgba(nodes[srcIdx].color, 0.4)
-                });
+                links.push({ source: srcIdx, target: procIdx, value: genes.length || 1 });
 
-                // 2. Process -> Genes
+                // 2. Process -> Gene
                 genes.forEach(gene => {
-                    if (!gene) return;
-                    const geneIdx = addNode(gene, sourceName, 'gene'); // Inherit category color
-                    links.push({
-                        source: procIdx,
-                        target: geneIdx,
-                        value: 1,
-                        color: hexToRgba(nodes[procIdx].color, 0.3)
-                    });
+                    const geneIdx = addNode(gene, sourceName, "gene");
+                    links.push({ source: procIdx, target: geneIdx, value: 1 });
 
-                    // 3. Genes -> Hubs
-                    // Since rows are grouped, we link genes in this row to hubs in this row
+                    // 3. Gene -> Hub
                     hubs.forEach(hub => {
-                        if (!hub) return;
-                        const hubIdx = addNode(hub, sourceName, 'hub'); // Hubs get colored by flow too? Or keep neutral?
-                        // Let's keep hubs neutral or colored by major flow? 
-                        // For now, inheriting color looks best for flow tracking.
-
-                        links.push({
-                            source: geneIdx,
-                            target: hubIdx,
-                            value: 1,
-                            color: hexToRgba(nodes[geneIdx].color, 0.3)
-                        });
+                        const hubIdx = addNode(hub, sourceName, "hub");
+                        links.push({ source: geneIdx, target: hubIdx, value: 1 });
                     });
                 });
             });
 
-            // --- Plotly Data ---
-            const data = [{
-                type: "sankey",
-                orientation: "h",
-                node: {
-                    pad: nodePad,
-                    thickness: nodeThickness,
-                    line: { color: "black", width: 0.5 },
-                    label: nodes.map(n => n.label),
-                    color: nodes.map(n => n.color),
-                    hovertemplate: '<b>%{label}</b><extra></extra>',
-                },
-                link: {
-                    source: links.map(d => d.source),
-                    target: links.map(d => d.target),
-                    value: links.map(d => d.value),
-                    color: links.map(d => d.color),
-                    hovertemplate: '%{source.label} → %{target.label}<br>Value: %{value}<extra></extra>'
-                }
-            }];
+            sankeyData = { nodes, links };
+        }
 
-            const layout = {
-                font: { size: fontSize, family: "Segoe UI, sans-serif", color: "#f1f5f9" },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                margin: { l: 20, r: 20, t: 80, b: 40 }, // Increased top margin for headers
-                height: document.getElementById('sankeyDiv').clientHeight,
-                annotations: [
-                    {
-                        x: 0, y: 1.05, xref: 'paper', yref: 'paper',
-                        text: '<b>Effect</b>', showarrow: false,
-                        font: { size: 14, color: '#94a3b8' }
-                    },
-                    {
-                        x: 0.33, y: 1.05, xref: 'paper', yref: 'paper',
-                        text: '<b>Process</b>', showarrow: false,
-                        font: { size: 14, color: '#94a3b8' }
-                    },
-                    {
-                        x: 0.66, y: 1.08, xref: 'paper', yref: 'paper',
-                        text: '<b>Gene</b><br><span style="font-size:11px; color:#64748b">(scRNAseq: Reactome)</span>',
-                        showarrow: false,
-                        font: { size: 14, color: '#94a3b8' }
-                    },
-                    {
-                        x: 1, y: 1.08, xref: 'paper', yref: 'paper',
-                        text: '<b>CellChat Pathway</b><br><span style="font-size:11px; color:#64748b">(CellChat Pathways)</span>',
-                        showarrow: false,
-                        font: { size: 14, color: '#94a3b8' }
-                    }
-                ]
+        // --- Rendering ---
+        function updateChart() {
+            const width = container.clientWidth - 40;
+            const height = parseInt(document.getElementById("chartHeight").value);
+            const nodePad = parseInt(document.getElementById("nodePad").value);
+            const fcMode = document.getElementById("fcMode").checked;
+            const linkOpacity = document.getElementById("linkOpacity").value;
+
+            // Show/Hide Legends
+            document.getElementById("fcLegend").style.display = fcMode ? "block" : "none";
+
+            svg.attr("width", width).attr("height", height);
+            svg.selectAll("*").remove(); // Clear previous
+
+            // Sankey Layout
+            const sankey = d3.sankey()
+                .nodeWidth(15)
+                .nodePadding(nodePad)
+                .extent([[10, 60], [width - 10, height - 20]]) // Top margin for headers
+                .nodeId(d => d.index); // Use index for linking
+
+            // Deep copy data for layout (d3 modifies it)
+            const graph = {
+                nodes: sankeyData.nodes.map(d => ({ ...d })),
+                links: sankeyData.links.map(d => ({ ...d }))
             };
 
-            const config = { responsive: true, displayModeBar: false };
+            sankey(graph);
 
-            Plotly.newPlot('sankeyDiv', data, layout, config);
-        }
+            // --- Drawing ---
 
-        // Helper: Hex to RGBA
-        function hexToRgba(hex, opacity) {
-            let c;
-            if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-                c = hex.substring(1).split('');
-                if (c.length == 3) {
-                    c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+            // 1. Links
+            const link = svg.append("g")
+                .attr("fill", "none")
+                .attr("stroke-opacity", linkOpacity)
+                .selectAll("path")
+                .data(graph.links)
+                .join("path")
+                .attr("class", "link")
+                .attr("d", d3.sankeyLinkHorizontal())
+                .attr("stroke", d => d.source.color)
+                .attr("stroke-width", d => Math.max(1, d.width));
+
+            link.append("title").text(d => `${d.source.name} → ${d.target.name}\nValue: ${d.value}`);
+
+            // 2. Nodes
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(graph.nodes)
+                .join("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+            // Render Logic: Rects vs Circles
+            node.each(function (d) {
+                const el = d3.select(this);
+                const isGene = d.type === "gene";
+
+                if (fcMode && isGene) {
+                    // CIRCLE MODE for Genes
+                    const fc = geneFCMap.get(d.name) || 0.5; // Default if missing
+                    const radius = Math.min(d.y1 - d.y0, 20) * (0.2 + fc * 0.15); // Scale radius
+
+                    // Adjust vertical center
+                    const cy = (d.y1 - d.y0) / 2;
+
+                    el.append("circle")
+                        .attr("cx", (d.x1 - d.x0) / 2)
+                        .attr("cy", cy)
+                        .attr("r", Math.max(3, radius))
+                        .attr("fill", d.color);
+
+                } else {
+                    // RECT MODE (Default)
+                    el.append("rect")
+                        .attr("height", d.y1 - d.y0)
+                        .attr("width", d.x1 - d.x0)
+                        .attr("fill", d.color);
                 }
-                c = '0x' + c.join('');
-                return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + opacity + ')';
+            });
+
+            // Node Labels
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? (d.x1 - d.x0) + 6 : -6)
+                .attr("y", d => (d.y1 - d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .text(d => d.name)
+                .style("font-size", d => d.type === "gene" && fcMode ? "10px" : "12px"); // Smaller font in FC mode
+
+            // 3. Headers (Manual positioning based on layout)
+            const headerG = svg.append("g");
+            const xPositions = [0, 0.33 * width, 0.66 * width, width];
+
+            // We can approximate header positions from node columns
+            // Identifying x-coords of node groups
+            const uniqueX = [...new Set(graph.nodes.map(d => d.x0))].sort((a, b) => a - b);
+
+            if (uniqueX.length >= 4) {
+                drawHeader(headerG, uniqueX[0], "Effect", "");
+                drawHeader(headerG, uniqueX[1], "Process", "");
+                drawHeader(headerG, uniqueX[2], "Gene", "(scRNAseq: Reactome)");
+                drawHeader(headerG, uniqueX[3], "CellChat Pathway", "(CellChat Pathways)");
             }
-            return hex;
         }
 
-        // Resize Chart Function
+        function drawHeader(g, x, title, sub) {
+            g.append("text")
+                .attr("class", "column-header")
+                .attr("x", x)
+                .attr("y", 30)
+                .text(title);
+
+            if (sub) {
+                g.append("text")
+                    .attr("class", "column-sub")
+                    .attr("x", x)
+                    .attr("y", 45)
+                    .text(sub);
+            }
+        }
+
         function resizeChart() {
             const height = document.getElementById('chartHeight').value;
-            document.getElementById('sankeyDiv').style.height = height + 'px';
-            Plotly.Plots.resize('sankeyDiv');
+            document.getElementById('sankeySvg').style.height = height + 'px';
+            updateChart();
         }
 
-        // Initialize
-        window.addEventListener('resize', () => Plotly.Plots.resize('sankeyDiv'));
-        // Set initial height
-        document.getElementById('sankeyDiv').style.height = '800px';
+        window.addEventListener("resize", updateChart);
         loadData();
 
     </script>

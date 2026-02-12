@@ -1,5 +1,5 @@
 Source,Process,Genes,Hubs
-(Pro-Tumour),ECM Remodeling & Invasion,"FN1, SPP1, GPNMB","FN1, LAMININ"
+(Pro-Tumour),ECM Remodeling & Invasion,"FN1, SPP1, GPNMB, FLOT1","FN1, LAMININ"
 (Pro-Tumour),Tumour Adhesion & Migration,"CD44, ITGAM, ALCAM, LGALS3","ICAM, JAM, CDH, ANGPT (vascular)"
 (Pro-Tumour),Cytoskeletal Dynamics,"ACTB, RHOQ, FMNL2, PLEC","SEMA4, CDH, JAM"
 (Pro-Tumour),Immune Evasion Checkpoints,PTPN12,SIRP (CD47 axis)
@@ -8,4 +8,4 @@ Source,Process,Genes,Hubs
 (Anti-Tumour),Differentiation Control,"MITF, TFEC",NOTCH
 (Metabolism),Glycolytic Shift (Warburg),"SLC2A1, HK2, PFKP, PKM",Glycolysis (Supporting)
 (Metabolism),Lipid Metabolism (Foamy TAMs),"FABP5, PLIN2, ABHD5",Fatty Acid Metabolism (Supporting)
-(Pro-Tumour),Angiogenesis Support,VEGFA,ANGPT (Tie2 signaling)
+(Metabolism),Angiogenesis Support,VEGFA,ANGPT (Tie2 signaling)

@@ -246,8 +246,9 @@
             let nodes = [];
             let nodeMap = new Map(); // Name -> Index
 
-            function addNode(name, category) {
-                if (!nodeMap.has(name)) {
+            function addNode(name, category, type) {
+                const id = `${name}__${type}`; // Unique ID based on type
+                if (!nodeMap.has(id)) {
                     let color = COLORS.Default;
 
                     // Determine color based on Category propagation
@@ -261,9 +262,9 @@
                         label: name,
                         color: color
                     });
-                    nodeMap.set(name, nodes.length - 1);
+                    nodeMap.set(id, nodes.length - 1);
                 }
-                return nodeMap.get(name);
+                return nodeMap.get(id);
             }
 
             let links = [];
@@ -279,8 +280,8 @@
                 const hubs = row.Hubs ? row.Hubs.split(',').map(s => s.trim()) : [];
 
                 // 1. Source -> Process
-                const srcIdx = addNode(sourceName, sourceName);
-                const procIdx = addNode(processName, sourceName); // Inherit category color
+                const srcIdx = addNode(sourceName, sourceName, 'source');
+                const procIdx = addNode(processName, sourceName, 'process'); // Inherit category color
 
                 // Link value = number of genes supporting this process
                 links.push({
@@ -293,7 +294,7 @@
                 // 2. Process -> Genes
                 genes.forEach(gene => {
                     if (!gene) return;
-                    const geneIdx = addNode(gene, sourceName); // Inherit category color
+                    const geneIdx = addNode(gene, sourceName, 'gene'); // Inherit category color
                     links.push({
                         source: procIdx,
                         target: geneIdx,
@@ -305,7 +306,7 @@
                     // Since rows are grouped, we link genes in this row to hubs in this row
                     hubs.forEach(hub => {
                         if (!hub) return;
-                        const hubIdx = addNode(hub, sourceName); // Hubs get colored by flow too? Or keep neutral?
+                        const hubIdx = addNode(hub, sourceName, 'hub'); // Hubs get colored by flow too? Or keep neutral?
                         // Let's keep hubs neutral or colored by major flow? 
                         // For now, inheriting color looks best for flow tracking.
 

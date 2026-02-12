@@ -386,7 +386,9 @@
                 const srcIdx = addNode(sourceNameClean, sourceNameRaw, "source");
                 const procIdx = addNode(processName, sourceNameRaw, "process");
 
-                links.push({ source: srcIdx, target: procIdx, value: genes.length || 1 });
+                // Fix: Scale input flow to match output flow (Genes * Hubs) so link covers full node height
+                const flowValue = (genes.length || 1) * Math.max(1, hubs.length);
+                links.push({ source: srcIdx, target: procIdx, value: flowValue });
 
                 // 2. Process -> Hub (CellChat Pathway)
                 hubs.forEach(hub => {

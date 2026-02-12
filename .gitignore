@@ -1,0 +1,17 @@
+# Libraries
+R_libs/
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -193,15 +193,15 @@
                 <label style="margin-bottom:10px; display:block">Signature Categories</label>
                 <div class="legend-item">
                     <div class="color-dot" style="background: #e74c3c"></div>
-                    Pro-Tumour TAM
+                    (Pro-Tumour)
                 </div>
                 <div class="legend-item">
                     <div class="color-dot" style="background: #27ae60"></div>
-                    Anti-Tumour TAM
+                    (Anti-Tumour)
                 </div>
                 <div class="legend-item">
                     <div class="color-dot" style="background: #8e44ad"></div>
-                    Metabolic / Hypoxia
+                    (Hypoxia & Metabolism)
                 </div>
             </div>
 
@@ -283,7 +283,8 @@
                 const hubs = row.Hubs ? row.Hubs.split(',').map(s => s.trim()) : [];
 
                 // 1. Source -> Process
-                const srcIdx = addNode(sourceName, sourceName, 'source');
+                // Split source node by process to ensure vertical alignment (stacking)
+                const srcIdx = addNode(sourceName, sourceName, 'source_' + processName);
                 const procIdx = addNode(processName, sourceName, 'process'); // Inherit category color
 
                 // Link value = number of genes supporting this process

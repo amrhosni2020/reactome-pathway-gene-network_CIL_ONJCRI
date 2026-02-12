@@ -328,11 +328,11 @@
         // --- Data Loading ---
         async function loadData() {
             try {
-                // Load Sankey Structure
-                const csvData = await d3.csv("data/sankey_data.csv");
+                // Load Sankey Structure with cache busting
+                const csvData = await d3.csv(`data/sankey_data.csv?v=${Date.now()}`);
 
-                // Load Fold Change Data
-                const fcData = await d3.csv("data/gene_fc.csv");
+                // Load Fold Change Data with cache busting
+                const fcData = await d3.csv(`data/gene_fc.csv?v=${Date.now()}`);
                 fcData.forEach(d => {
                     geneFCMap.set(d.gene, Math.abs(parseFloat(d.LogFC) || 0));
                 });

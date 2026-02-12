@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Diagram | CellChat Analysis</title>
+    <!-- Load Plotly.js from CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --accent-color: #3b82f6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar Controls */
+        .sidebar {
+            width: 350px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        button {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .chart-area {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+        }
+
+        #sankeyDiv {
+            width: 100%;
+            height: 100%;
+        }
+
+        .legend {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <h1>Genes → Processes → Pathways</h1>
+            <div class="subtitle">Mapping Gene Signatures to Functional Hubs</div>
+        </div>
+        <a href="index.html" class="back-link">← Back to Dashboard</a>
+    </header>
+
+    <div class="main-container">
+        <div class="sidebar">
+
+            <div class="control-group">
+                <label>Visualization Controls</label>
+                <div>
+                    <span style="font-size:0.8rem; color:var(--text-secondary)">Node Padding</span>
+                    <input type="range" id="nodePad" min="1" max="100" value="15" oninput="updatePlot()">
+                </div>
+                <div>
+                    <span style="font-size:0.8rem; color:var(--text-secondary)">Node Thickness</span>
+                    <input type="range" id="nodeThickness" min="5" max="50" value="20" oninput="updatePlot()">
+                </div>
+                <div>
+                    <span style="font-size:0.8rem; color:var(--text-secondary)">Font Size</span>
+                    <input type="range" id="fontSize" min="8" max="24" value="12" oninput="updatePlot()">
+                </div>
+            </div>
+
+            <div class="legend">
+                <label style="margin-bottom:10px; display:block">Signature Categories</label>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #e74c3c"></div>
+                    Pro-Tumour TAM
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #27ae60"></div>
+                    Anti-Tumour TAM
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #8e44ad"></div>
+                    Metabolic / Hypoxia
+                </div>
+            </div>
+
+            <div style="margin-top:20px; font-size:0.8rem; color:var(--text-secondary); line-height:1.5">
+                <strong>Data Source:</strong><br>
+                Comparison of Human Liver Metastasis vs Mouse sgp130 Blockade.<br><br>
+                Shows how specific gene clusters drive functional processes which map to CellChat signaling hubs.
+            </div>
+        </div>
+
+        <div class="chart-area">
+            <div id="sankeyDiv"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const COLORS = {
+            "Pro-Tumour": "#e74c3c", // Red
+            "Anti-Tumour": "#27ae60", // Green
+            "Metabolic": "#8e44ad",   // Purple
+            "Default": "#64748b"      // Slate 500
+        };
+
+        let rawData = [];
+
+        async function loadData() {
+            try {
+                rawData = await d3.csv("data/sankey_data.csv");
+                updatePlot();
+            } catch (error) {
+                console.error("Error loading data:", error);
+                document.getElementById('sankeyDiv').innerHTML = `<div style="color:red; padding:20px">Error loading data: ${error.message}</div>`;
+            }
+        }
+
+        function updatePlot() {
+            if (!rawData.length) return;
+
+            const nodePad = parseInt(document.getElementById('nodePad').value);
+            const nodeThickness = parseInt(document.getElementById('nodeThickness').value);
+            const fontSize = parseInt(document.getElementById('fontSize').value);
+
+            // --- Build Nodes & Links ---
+            let nodes = [];
+            let nodeMap = new Map(); // Name -> Index
+
+            function addNode(name, category) {
+                if (!nodeMap.has(name)) {
+                    let color = COLORS.Default;
+
+                    // Determine color based on Category propagation
+                    if (category) {
+                        if (category.includes("Pro-Tumour")) color = COLORS["Pro-Tumour"];
+                        else if (category.includes("Anti-Tumour")) color = COLORS["Anti-Tumour"];
+                        else if (category.includes("Metabolic")) color = COLORS["Metabolic"];
+                    }
+
+                    nodes.push({
+                        label: name,
+                        color: color
+                    });
+                    nodeMap.set(name, nodes.length - 1);
+                }
+                return nodeMap.get(name);
+            }
+
+            let links = [];
+
+            rawData.forEach(row => {
+                // Source is the primary category (e.g., Pro-Tumour TAM Signature)
+                const sourceName = row.Source;
+                const processName = row.Process;
+
+                // Clean up lists (remove quotes handled by d3.csv, but split by comma)
+                // d3.csv parses quoted fields automatically, but multiple items are just a string "A, B"
+                const genes = row.Genes ? row.Genes.split(',').map(s => s.trim()) : [];
+                const hubs = row.Hubs ? row.Hubs.split(',').map(s => s.trim()) : [];
+
+                // 1. Source -> Process
+                const srcIdx = addNode(sourceName, sourceName);
+                const procIdx = addNode(processName, sourceName); // Inherit category color
+
+                // Link value = number of genes supporting this process
+                links.push({
+                    source: srcIdx,
+                    target: procIdx,
+                    value: genes.length || 1,
+                    color: hexToRgba(nodes[srcIdx].color, 0.4)
+                });
+
+                // 2. Process -> Genes
+                genes.forEach(gene => {
+                    if (!gene) return;
+                    const geneIdx = addNode(gene, sourceName); // Inherit category color
+                    links.push({
+                        source: procIdx,
+                        target: geneIdx,
+                        value: 1,
+                        color: hexToRgba(nodes[procIdx].color, 0.3)
+                    });
+
+                    // 3. Genes -> Hubs
+                    // Since rows are grouped, we link genes in this row to hubs in this row
+                    hubs.forEach(hub => {
+                        if (!hub) return;
+                        const hubIdx = addNode(hub, sourceName); // Hubs get colored by flow too? Or keep neutral?
+                        // Let's keep hubs neutral or colored by major flow? 
+                        // For now, inheriting color looks best for flow tracking.
+
+                        links.push({
+                            source: geneIdx,
+                            target: hubIdx,
+                            value: 1,
+                            color: hexToRgba(nodes[geneIdx].color, 0.3)
+                        });
+                    });
+                });
+            });
+
+            // --- Plotly Data ---
+            const data = [{
+                type: "sankey",
+                orientation: "h",
+                node: {
+                    pad: nodePad,
+                    thickness: nodeThickness,
+                    line: { color: "black", width: 0.5 },
+                    label: nodes.map(n => n.label),
+                    color: nodes.map(n => n.color),
+                    hovertemplate: '<b>%{label}</b><extra></extra>',
+                },
+                link: {
+                    source: links.map(d => d.source),
+                    target: links.map(d => d.target),
+                    value: links.map(d => d.value),
+                    color: links.map(d => d.color),
+                    hovertemplate: '%{source.label} → %{target.label}<br>Value: %{value}<extra></extra>'
+                }
+            }];
+
+            const layout = {
+                font: { size: fontSize, family: "Segoe UI, sans-serif", color: "#f1f5f9" },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { l: 20, r: 20, t: 40, b: 40 },
+                height: document.getElementById('sankeyDiv').clientHeight
+            };
+
+            const config = { responsive: true, displayModeBar: false };
+
+            Plotly.newPlot('sankeyDiv', data, layout, config);
+        }
+
+        // Helper: Hex to RGBA
+        function hexToRgba(hex, opacity) {
+            let c;
+            if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+                c = hex.substring(1).split('');
+                if (c.length == 3) {
+                    c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+                }
+                c = '0x' + c.join('');
+                return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + opacity + ')';
+            }
+            return hex;
+        }
+
+        // Initialize
+        window.addEventListener('resize', () => Plotly.Plots.resize('sankeyDiv'));
+        loadData();
+
+    </script>
+</body>
+
+</html>

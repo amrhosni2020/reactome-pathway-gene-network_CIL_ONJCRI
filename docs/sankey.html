@@ -369,8 +369,12 @@
             }
 
             rawData.forEach(row => {
-                // Function to clean names (remove text in brackets)
-                const clean = (s) => s.replace(/\s*\(.*?\)\s*/g, '').trim();
+                // Function to clean names (remove text in brackets but keep content if it's the only text)
+                const clean = (s) => {
+                    const match = s.match(/^\((.*?)\)$/);
+                    if (match) return match[1].trim(); // If "(Text)", return "Text"
+                    return s.replace(/\s*\(.*?\)\s*/g, '').trim(); // Remove brackets elsewhere
+                };
 
                 const sourceNameRaw = row.Source;
                 const sourceNameClean = clean(row.Source);

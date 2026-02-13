@@ -707,7 +707,8 @@
             const isVisible = overlay.style.display === "flex";
             overlay.style.display = isVisible ? "none" : "flex";
 
-            if (!isVisible && document.getElementById("tableBody").innerHTML === "") {
+            const tbody = document.getElementById("tableBody");
+            if (!isVisible && (tbody.children.length === 0 || tbody.innerHTML.trim().length < 50)) {
                 populateTable();
             }
         }

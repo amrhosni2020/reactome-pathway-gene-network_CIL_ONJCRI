@@ -35,6 +35,9 @@ for gene in gene_to_manual.keys():
     primary_procs = gene_processes['Process_primary'].unique()
     primary_procs_list = ", ".join([str(p) for p in primary_procs if str(p) != 'nan'])
     
+    # Get all Reactome IDs (term_ids)
+    reactome_ids = ", ".join(term_ids)
+    
     # Also get specific pathway names for context (top 3)
     pathway_names = gene_processes['pathway_name'].head(3).tolist()
     pathway_names_str = ", ".join(pathway_names)
@@ -42,6 +45,7 @@ for gene in gene_to_manual.keys():
     results.append({
         "Gene": gene,
         "Manual Classification": gene_to_manual[gene],
+        "Reactome IDs": reactome_ids,
         "Reactome Primary Process": primary_procs_list,
         "Example Reactome Pathways": pathway_names_str
     })
@@ -50,7 +54,23 @@ for gene in gene_to_manual.keys():
 final_df = pd.DataFrame(results)
 
 # Clean up Column Names for Markdown
-final_df.columns = ["Gene", "Manual Classification (Manuscript)", "Reactome Primary Process", "Top Reactome Pathways"]
+final_df.columns = ["Gene", "Manual Classification (Manuscript)", "Reactome IDs", "Reactome Primary Process", "Top Reactome Pathways"]
 
 # Print as Markdown
 print(final_df.to_markdown(index=False))
+
+# Print as JSON for UI integration
+print("\nJSON_OUTPUT_START")
+# Prepare data for JS
+js_results = []
+for r in results:
+    js_results.append({
+        "Gene": r["Gene"],
+        "Manual": r["Manual Classification"],
+        "IDs": r["Reactome IDs"],
+        "Reactome": r["Reactome Primary Process"],
+        "Pathways": r["Example Reactome Pathways"]
+    })
+import json
+print(json.dumps(js_results))
+print("JSON_OUTPUT_END")

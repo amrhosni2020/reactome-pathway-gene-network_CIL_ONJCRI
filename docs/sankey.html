@@ -249,6 +249,51 @@
             color: var(--text-primary);
         }
 
+        /* Expandable Cell Styles */
+        .expandable-cell {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px !important;
+            transition: background 0.2s;
+        }
+
+        .expandable-cell:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .expand-toggle {
+            position: absolute;
+            right: 8px;
+            top: 12px;
+            font-size: 0.8rem;
+            transition: transform 0.3s;
+            color: var(--accent-color);
+            opacity: 0.7;
+        }
+
+        .expandable-cell.expanded .expand-toggle {
+            transform: rotate(180deg);
+        }
+
+        .summary-text {
+            display: block;
+        }
+
+        .expandable-cell.expanded .summary-text {
+            display: none;
+        }
+
+        .full-content {
+            display: none;
+            padding-top: 5px;
+            border-top: 1px hide solid rgba(255, 255, 255, 0.1);
+            line-height: 1.4;
+        }
+
+        .expandable-cell.expanded .full-content {
+            display: block;
+        }
+
         .close-btn {
             background: rgba(255, 255, 255, 0.1);
             border: none;
@@ -686,17 +731,44 @@
             }
         }
 
+        function toggleExpand(cell) {
+            cell.classList.toggle('expanded');
+        }
+
         function populateTable() {
             const tbody = document.getElementById("tableBody");
-            tbody.innerHTML = MAPPING_DATA.map(d => `
-                <tr>
-                    <td style="font-weight:bold; color:var(--accent-color)">${d.Gene}</td>
-                    <td>${d.Manual}</td>
-                    <td style="font-size: 0.7rem; color: var(--text-secondary); max-width: 200px; overflow-wrap: break-word;">${d.IDs}</td>
-                    <td style="font-size: 0.75rem">${d.Reactome}</td>
-                    <td>${d.Pathways}</td>
-                </tr>
-            `).join("");
+
+            tbody.innerHTML = MAPPING_DATA.map(d => {
+                // Helper to format expandable cell
+                const formatExpandable = (dataString) => {
+                    const items = dataString.split(',').map(s => s.trim());
+                    if (items.length <= 1) return dataString;
+
+                    return `
+                        <div class="expandable-cell" onclick="toggleExpand(this)">
+                            <span class="summary-text">${items[0]} <span style="color:var(--text-secondary); font-size: 0.7rem;">(+${items.length - 1} more)</span></span>
+                            <span class="expand-toggle">▼</span>
+                            <div class="full-content">
+                                ${items.join(', ')}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                return `
+                    <tr>
+                        <td style="font-weight:bold; color:var(--accent-color)">${d.Gene}</td>
+                        <td>${d.Manual}</td>
+                        <td style="font-size: 0.7rem; color: var(--text-secondary); max-width: 200px; overflow-wrap: break-word;">
+                            ${formatExpandable(d.IDs)}
+                        </td>
+                        <td style="font-size: 0.75rem">
+                            ${formatExpandable(d.Reactome)}
+                        </td>
+                        <td>${d.Pathways}</td>
+                    </tr>
+                `;
+            }).join("");
         }
 
         loadData();

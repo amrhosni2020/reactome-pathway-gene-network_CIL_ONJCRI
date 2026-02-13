@@ -217,6 +217,105 @@
             fill: #64748b;
             font-weight: normal;
         }
+
+        /* Mapping Table Overlay */
+        .overlay-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .overlay-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .overlay-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+            background: #1e293b;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.2);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 
@@ -248,6 +347,19 @@
                     <span style="font-size:0.8rem; color:var(--text-secondary)">Chart Height</span>
                     <input type="range" id="chartHeight" min="600" max="2500" step="50" value="800"
                         oninput="resizeChart()">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Data Verification</label>
+                <button class="btn-primary" onclick="toggleTable()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18" />
+                    </svg>
+                    View Mapping Table
+                </button>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">
+                    Cross-referencing genes with Reactome Primary Processes for manuscript validation.
                 </div>
             </div>
 
@@ -293,6 +405,29 @@
 
         <div class="chart-area" id="chartContainer">
             <svg id="sankeySvg"></svg>
+
+            <!-- Table Overlay -->
+            <div id="tableOverlay" class="overlay-container">
+                <div class="overlay-header">
+                    <h2>Gene-to-Process Mapping Validation</h2>
+                    <button class="close-btn" onclick="toggleTable()">Close Table</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="mappingTable">
+                        <thead>
+                            <tr>
+                                <th>Gene</th>
+                                <th>Manuscript Classification</th>
+                                <th>Reactome Primary Process</th>
+                                <th>Top Reactome Pathways</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -535,6 +670,60 @@
         }
 
         window.addEventListener("resize", updateChart);
+
+        // --- Table Logic ---
+        const MAPPING_DATA = [
+            { "Gene": "FN1", "Manual": "ECM Remodeling & Invasion", "Reactome": "Angiogenesis_Vascular_Hemostasis, Other_Mixed_or_Generic, Cytokine_JAK_STAT_Signaling, ECM_Remodeling_Adhesion, Metabolism, Oncogenic_GrowthFactor_Signaling", "Pathways": "Hemostasis, Platelet degranulation, Developmental Biology" },
+            { "Gene": "SPP1", "Manual": "ECM Remodeling & Invasion", "Reactome": "ECM_Remodeling_Adhesion, Other_Mixed_or_Generic, Oncogenic_GrowthFactor_Signaling, Metabolism", "Pathways": "Degradation of the extracellular matrix, Extracellular matrix organization, Signal Transduction" },
+            { "Gene": "GPNMB", "Manual": "ECM Remodeling & Invasion", "Reactome": "Other_Mixed_or_Generic", "Pathways": "Signal Transduction, Signaling by PTK6, PTK6 promotes HIF1A stabilization" },
+            { "Gene": "FLOT1", "Manual": "ECM Remodeling & Invasion", "Reactome": "Other_Mixed_or_Generic, Apoptosis_Survival, ECM_Remodeling_Adhesion", "Pathways": "Neuronal System, Signal Transduction, Signaling by Rho GTPases" },
+            { "Gene": "CD44", "Manual": "Tumour Adhesion & Migration", "Reactome": "Angiogenesis_Vascular_Hemostasis, Cytokine_JAK_STAT_Signaling, Metabolism, ECM_Remodeling_Adhesion, Innate_Immunity_Myeloid_Phagocyte, Other_Mixed_or_Generic", "Pathways": "Hemostasis, Cytokine Signaling in Immune system, Metabolism" },
+            { "Gene": "ITGAM", "Manual": "Tumour Adhesion & Migration", "Reactome": "Angiogenesis_Vascular_Hemostasis, Cytokine_JAK_STAT_Signaling, ECM_Remodeling_Adhesion, Innate_Immunity_Myeloid_Phagocyte, Other_Mixed_or_Generic", "Pathways": "Hemostasis, Cytokine Signaling in Immune system, Extracellular matrix organization" },
+            { "Gene": "ALCAM", "Manual": "Tumour Adhesion & Migration", "Reactome": "Other_Mixed_or_Generic", "Pathways": "Developmental Biology, L1CAM interactions, Axon guidance" },
+            { "Gene": "LGALS3", "Manual": "Tumour Adhesion & Migration", "Reactome": "Innate_Immunity_Myeloid_Phagocyte, Other_Mixed_or_Generic", "Pathways": "Innate Immune System, Immune System, Generic Transcription Pathway" },
+            { "Gene": "ACTB", "Manual": "Cytoskeletal Dynamics", "Reactome": "Angiogenesis_Vascular_Hemostasis, Cytokine_JAK_STAT_Signaling, Other_Mixed_or_Generic, ECM_Remodeling_Adhesion, Innate_Immunity_Myeloid_Phagocyte, Metabolism, Cell_Cycle_DNA_Replication, Oncogenic_GrowthFactor_Signaling", "Pathways": "Hemostasis, Antimicrobial mechanism of IFN-stimulated genes, Developmental Biology" },
+            { "Gene": "RHOQ", "Manual": "Cytoskeletal Dynamics", "Reactome": "Other_Mixed_or_Generic", "Pathways": "Translocation of SLC2A4 (GLUT4) to the plasma membrane, Signal Transduction, Signaling by Rho GTPases" },
+            { "Gene": "FMNL2", "Manual": "Cytoskeletal Dynamics", "Reactome": "Other_Mixed_or_Generic", "Pathways": "Signal Transduction, Signaling by Rho GTPases, RHO GTPase Effectors" },
+            { "Gene": "PLEC", "Manual": "Cytoskeletal Dynamics", "Reactome": "Apoptosis_Survival, Other_Mixed_or_Generic, ECM_Remodeling_Adhesion", "Pathways": "Apoptosis, Apoptotic cleavage of cellular proteins, Extracellular matrix organization" },
+            { "Gene": "PTPN12", "Manual": "Immune Evasion Checkpoints", "Reactome": "Oncogenic_GrowthFactor_Signaling, Other_Mixed_or_Generic, Cytokine_JAK_STAT_Signaling", "Pathways": "Signaling by ERBB2, Signaling by ERBB2 in Cancer, SHC1 events in ERBB2 signaling" },
+            { "Gene": "CTSS", "Manual": "Antigen Presentation", "Reactome": "Innate_Immunity_Myeloid_Phagocyte, Other_Mixed_or_Generic, ECM_Remodeling_Adhesion", "Pathways": "Antigen processing-Cross presentation, Endosomal/Vacuolar pathway, Adaptive Immune System" },
+            { "Gene": "CTSD", "Manual": "Antigen Presentation", "Reactome": "Other_Mixed_or_Generic, ECM_Remodeling_Adhesion, Innate_Immunity_Myeloid_Phagocyte, Metabolism, Cell_Cycle_DNA_Replication", "Pathways": "Adaptive Immune System, Collagen degradation, Degradation of the extracellular matrix" },
+            { "Gene": "CISH", "Manual": "Interferon Response", "Reactome": "Cytokine_JAK_STAT_Signaling, Other_Mixed_or_Generic, Metabolism", "Pathways": "Interleukin-7 signaling, Cytokine Signaling in Immune system, Immune System" },
+            { "Gene": "IFITM2", "Manual": "Interferon Response", "Reactome": "Cytokine_JAK_STAT_Signaling, Other_Mixed_or_Generic", "Pathways": "Cytokine Signaling in Immune system, Immune System, Interferon alpha/beta signaling" },
+            { "Gene": "MITF", "Manual": "Differentiation Control", "Reactome": "Other_Mixed_or_Generic, Metabolism, Apoptosis_Survival, Cell_Cycle_DNA_Replication, Stress_Response_DNA_Damage_Autophagy, ECM_Remodeling_Adhesion", "Pathways": "Developmental Biology, SUMOylation, SUMO E3 ligases SUMOylate target proteins" },
+            { "Gene": "TFEC", "Manual": "Differentiation Control", "Reactome": "Other_Mixed_or_Generic", "Pathways": "Developmental Biology, MITF-M-regulated melanocyte development, Transcriptional and post-translational regulation of MITF-M expression and activity" },
+            { "Gene": "SLC2A1", "Manual": "Glycolytic Shift (Warburg)", "Reactome": "Metabolism, Other_Mixed_or_Generic", "Pathways": "Metabolism, Integration of energy metabolism, Disease" },
+            { "Gene": "HK2", "Manual": "Glycolytic Shift (Warburg)", "Reactome": "Metabolism", "Pathways": "Metabolism, Glycolysis, Glucose metabolism" },
+            { "Gene": "PFKP", "Manual": "Glycolytic Shift (Warburg)", "Reactome": "Metabolism", "Pathways": "Metabolism, Glycolysis, Glucose metabolism" },
+            { "Gene": "PKM", "Manual": "Glycolytic Shift (Warburg)", "Reactome": "Metabolism, Other_Mixed_or_Generic, Innate_Immunity_Myeloid_Phagocyte, ECM_Remodeling_Adhesion", "Pathways": "Aerobic respiration and respiratory electron transport, Metabolism, Cell-Cell communication" },
+            { "Gene": "FABP5", "Manual": "Lipid Metabolism (Foamy TAMs)", "Reactome": "Metabolism, Other_Mixed_or_Generic, Innate_Immunity_Myeloid_Phagocyte", "Pathways": "Metabolism, Signal Transduction, Triglyceride catabolism" },
+            { "Gene": "PLIN2", "Manual": "Lipid Metabolism (Foamy TAMs)", "Reactome": "Metabolism, Stress_Response_DNA_Damage_Autophagy, Other_Mixed_or_Generic", "Pathways": "Metabolism, Macroautophagy, PPARA activates gene expression" },
+            { "Gene": "ABHD5", "Manual": "Lipid Metabolism (Foamy TAMs)", "Reactome": "Metabolism, Other_Mixed_or_Generic", "Pathways": "Metabolism, Triglyceride catabolism, Metabolism of lipids" },
+            { "Gene": "VEGFA", "Manual": "Angiogenesis Support", "Reactome": "Angiogenesis_Vascular_Hemostasis, Stress_Response_DNA_Damage_Autophagy, Cytokine_JAK_STAT_Signaling, Other_Mixed_or_Generic", "Pathways": "Hemostasis, Platelet degranulation, Regulation of gene expression by Hypoxia-inducible Factor" }
+        ];
+
+        function toggleTable() {
+            const overlay = document.getElementById("tableOverlay");
+            const isVisible = overlay.style.display === "flex";
+            overlay.style.display = isVisible ? "none" : "flex";
+
+            if (!isVisible && document.getElementById("tableBody").innerHTML === "") {
+                populateTable();
+            }
+        }
+
+        function populateTable() {
+            const tbody = document.getElementById("tableBody");
+            tbody.innerHTML = MAPPING_DATA.map(d => `
+                <tr>
+                    <td style="font-weight:bold; color:var(--accent-color)">${d.Gene}</td>
+                    <td>${d.Manual}</td>
+                    <td style="font-size: 0.75rem">${d.Reactome}</td>
+                    <td>${d.Pathways}</td>
+                </tr>
+            `).join("");
+        }
+
         loadData();
 
     </script>

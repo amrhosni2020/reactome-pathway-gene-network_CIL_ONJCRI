@@ -224,7 +224,7 @@
 
     <header>
         <div>
-            <h1>Effect → Process → CellChat Pathway → Gene</h1>
+            <h1>Biological Process → CellChat Pathway (with Genes)</h1>
             <div class="subtitle">Mapping Gene Signatures to Functional Hubs</div>
         </div>
         <a href="index.html" class="back-link">← Back to Dashboard</a>
@@ -251,16 +251,7 @@
                 </div>
             </div>
 
-            <div class="control-group">
-                <label>Features</label>
-                <div class="checkbox-wrapper">
-                    <input type="checkbox" id="fcMode" onchange="updateChart()">
-                    <div>
-                        <span style="display:block; font-weight:600; font-size:0.9rem;">Fold Change Size</span>
-                        <span style="font-size:0.75rem; color:var(--text-secondary)">Size Genes by Expression FC</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Fold Change Mode Removed for 2-Column Layout -->
 
             <div class="legend" id="legendContainer">
                 <label style="margin-bottom:10px; display:block">Signature Categories</label>
@@ -319,7 +310,6 @@
         };
 
         let sankeyData = { nodes: [], links: [] };
-        let geneFCMap = new Map(); // Gene -> LogFC
 
         const svg = d3.select("#sankeySvg");
         const container = document.getElementById("chartContainer");
@@ -330,12 +320,6 @@
             try {
                 // Load Sankey Structure with cache busting
                 const csvData = await d3.csv(`data/sankey_data.csv?v=${Date.now()}`);
-
-                // Load Fold Change Data with cache busting
-                const fcData = await d3.csv(`data/gene_fc.csv?v=${Date.now()}`);
-                fcData.forEach(d => {
-                    geneFCMap.set(d.gene, Math.abs(parseFloat(d.LogFC) || 0));
-                });
 
                 processData(csvData);
                 updateChart();
@@ -352,56 +336,80 @@
             let nodeMap = new Map();
             let links = [];
 
+            // Helper to get/create node
             function addNode(name, category, type) {
                 const id = `${name}__${type}`;
                 if (!nodeMap.has(id)) {
                     let color = COLORS.Default;
-                    if (category) {
+                    // Process nodes get colored by their Source category
+                    if (type === "process" && category) {
                         if (category.includes("Pro-Tumour")) color = COLORS["Pro-Tumour"];
                         else if (category.includes("Anti-Tumour")) color = COLORS["Anti-Tumour"];
                         else if (category.includes("Metabolism")) color = COLORS["Metabolic"];
                     }
 
-                    nodes.push({ name: name, type: type, category: category, color: color, id: id });
+                    // Pathway nodes can inherit color or stay neutral. 
+                    // Let's keep them neutral (Default) so the links (colored by source) pop out, 
+                    // OR color them if they are strictly associated with one category.
+                    // For now, default.
+
+                    nodes.push({
+                        name: name,
+                        type: type,
+                        category: category,
+                        color: color,
+                        id: id,
+                        genes: new Set() // Store unique genes associated with this node (for Pathways)
+                    });
                     nodeMap.set(id, nodes.length - 1);
                 }
                 return nodeMap.get(id);
             }
 
             rawData.forEach(row => {
-                // Function to clean names (remove text in brackets but keep content if it's the only text)
+                // Function to clean names
                 const clean = (s) => {
                     const match = s.match(/^\((.*?)\)$/);
-                    if (match) return match[1].trim(); // If "(Text)", return "Text"
-                    if (s.includes("ANGPT")) return s.trim(); // Keep ANGPT variants distinct (e.g. Tie2 vs vascular)
-                    return s.replace(/\s*\(.*?\)\s*/g, '').trim(); // Remove brackets elsewhere
+                    if (match) return match[1].trim();
+                    if (s.includes("ANGPT")) return s.trim();
+                    return s.replace(/\s*\(.*?\)\s*/g, '').trim();
                 };
 
-                const sourceNameRaw = row.Source;
-                const sourceNameClean = clean(row.Source);
+                const sourceNameRaw = row.Source; // Used for coloring
                 const processName = clean(row.Process);
                 const genes = row.Genes ? row.Genes.split(',').map(s => clean(s.trim())).filter(s => s) : [];
                 const hubs = row.Hubs ? row.Hubs.split(',').map(s => clean(s.trim())).filter(s => s) : [];
 
-                // 1. Source -> Process
-                const srcIdx = addNode(sourceNameClean, sourceNameRaw, "source");
+                // 1. Process Node (Level 0)
+                // We do NOT create a Source node. We just use sourceNameRaw to color the Process node.
                 const procIdx = addNode(processName, sourceNameRaw, "process");
 
-                // Fix: Scale input flow to match output flow (Genes * Hubs) so link covers full node height
-                const flowValue = (genes.length || 1) * Math.max(1, hubs.length);
-                links.push({ source: srcIdx, target: procIdx, value: flowValue });
-
-                // 2. Process -> Hub (CellChat Pathway)
+                // 2. Pathway Node (Level 1)
                 hubs.forEach(hub => {
-                    const hubIdx = addNode(hub, sourceNameRaw, "hub");
-                    links.push({ source: procIdx, target: hubIdx, value: genes.length || 1 }); // Link weight based on associated genes
+                    const hubIdx = addNode(hub, sourceNameRaw, "pathway");
 
-                    // 3. Hub -> Gene
-                    genes.forEach(gene => {
-                        const geneIdx = addNode(gene, sourceNameRaw, "gene");
-                        links.push({ source: hubIdx, target: geneIdx, value: 1 });
-                    });
+                    // Add genes to the Pathway node's set
+                    const hubNode = nodes[hubIdx];
+                    genes.forEach(g => hubNode.genes.add(g));
+
+                    // Link: Process -> Pathway
+                    // Value = number of genes in this interaction
+                    links.push({ source: procIdx, target: hubIdx, value: genes.length || 1 });
                 });
+            });
+
+            // Post-process: Update Pathway names to include separate genes
+            nodes.forEach(n => {
+                if (n.type === "pathway") {
+                    const geneList = Array.from(n.genes).join(", ");
+                    if (geneList) {
+                        n.displayName = `${n.name} (${geneList})`;
+                    } else {
+                        n.displayName = n.name;
+                    }
+                } else {
+                    n.displayName = n.name;
+                }
             });
 
             sankeyData = { nodes, links };
@@ -412,23 +420,23 @@
             const width = container.clientWidth - 40;
             const height = parseInt(document.getElementById("chartHeight").value);
             const nodePad = parseInt(document.getElementById("nodePad").value);
-            const fcMode = document.getElementById("fcMode").checked;
             const linkOpacity = document.getElementById("linkOpacity").value;
 
-            // Show/Hide Legends
-            document.getElementById("fcLegend").style.display = fcMode ? "block" : "none";
+            // Hide FC Controls/Legend as they are no longer relevant in 2-column mode
+            // document.getElementById("fcMode").disabled = true; 
+            document.getElementById("fcLegend").style.display = "none";
 
             svg.attr("width", width).attr("height", height);
-            svg.selectAll("*").remove(); // Clear previous
+            svg.selectAll("*").remove();
 
             // Sankey Layout
             const sankey = d3.sankey()
                 .nodeWidth(15)
                 .nodePadding(nodePad)
-                .extent([[100, 60], [width - 100, height - 20]]) // Increased side margins to fix truncation
-                .nodeId(d => d.index); // Use index for linking
+                .extent([[50, 60], [width - 350, height - 20]]) // Increased right margin for long gene labels
+                .nodeId(d => d.index);
 
-            // Deep copy data for layout (d3 modifies it)
+            // Deep copy data 
             const graph = {
                 nodes: sankeyData.nodes.map(d => ({ ...d })),
                 links: sankeyData.links.map(d => ({ ...d }))
@@ -447,7 +455,7 @@
                 .join("path")
                 .attr("class", "link")
                 .attr("d", d3.sankeyLinkHorizontal())
-                .attr("stroke", d => d.source.color)
+                .attr("stroke", d => d.source.color) // Link color = Process color
                 .attr("stroke-width", d => Math.max(1, d.width));
 
             link.append("title").text(d => `${d.source.name} → ${d.target.name}\nValue: ${d.value}`);
@@ -478,33 +486,11 @@
                 link.attr("d", d3.sankeyLinkHorizontal());
             }
 
-            // Render Logic: Rects vs Circles
-            node.each(function (d) {
-                const el = d3.select(this);
-                const isGene = d.type === "gene";
-
-                if (fcMode && isGene) {
-                    // CIRCLE MODE for Genes
-                    const fc = geneFCMap.get(d.name) || 0.5; // Default if missing
-                    const radius = Math.min(d.y1 - d.y0, 20) * (0.2 + fc * 0.15); // Scale radius
-
-                    // Adjust vertical center
-                    const cy = (d.y1 - d.y0) / 2;
-
-                    el.append("circle")
-                        .attr("cx", (d.x1 - d.x0) / 2)
-                        .attr("cy", cy)
-                        .attr("r", Math.max(3, radius))
-                        .attr("fill", d.color);
-
-                } else {
-                    // RECT MODE (Default)
-                    el.append("rect")
-                        .attr("height", d.y1 - d.y0)
-                        .attr("width", d.x1 - d.x0)
-                        .attr("fill", d.color);
-                }
-            });
+            // Rects
+            node.append("rect")
+                .attr("height", d => d.y1 - d.y0)
+                .attr("width", d => d.x1 - d.x0)
+                .attr("fill", d => d.color);
 
             // Node Labels
             node.append("text")
@@ -512,24 +498,16 @@
                 .attr("y", d => (d.y1 - d.y0) / 2)
                 .attr("dy", "0.35em")
                 .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-                .text(d => d.name)
-                .style("fill", d => d.color) // Match text color to node color
-                .style("font-size", d => d.type === "gene" && fcMode ? "10px" : "12px");
+                .text(d => d.displayName) // Use the composed name with genes
+                .style("fill", "#f1f5f9")
+                .style("font-size", "12px")
+                .style("font-weight", d => d.type === "pathway" ? "bold" : "normal");
 
-            // 3. Headers (Manual positioning based on layout)
+            // 3. Headers
             const headerG = svg.append("g");
-            const xPositions = [0, 0.33 * width, 0.66 * width, width];
-
-            // We can approximate header positions from node columns
-            // Identifying x-coords of node groups
-            const uniqueX = [...new Set(graph.nodes.map(d => d.x0))].sort((a, b) => a - b);
-
-            if (uniqueX.length >= 4) {
-                drawHeader(headerG, uniqueX[0], "Effect", "");
-                drawHeader(headerG, uniqueX[1], "Process", "");
-                drawHeader(headerG, uniqueX[2], "CellChat Pathway", "(CellChat Pathways)");
-                drawHeader(headerG, uniqueX[3], "Gene", "(scRNAseq: Reactome)");
-            }
+            // Simple 2-column headers
+            drawHeader(headerG, 50, "Biological Process", "Colored by Tumour Effect");
+            drawHeader(headerG, width - 350, "CellChat Pathway", "Genes Associated");
         }
 
         function drawHeader(g, x, title, sub) {
@@ -537,6 +515,7 @@
                 .attr("class", "column-header")
                 .attr("x", x)
                 .attr("y", 30)
+                .attr("text-anchor", "start") // Align left for predictability
                 .text(title);
 
             if (sub) {
@@ -544,6 +523,7 @@
                     .attr("class", "column-sub")
                     .attr("x", x)
                     .attr("y", 45)
+                    .attr("text-anchor", "start")
                     .text(sub);
             }
         }

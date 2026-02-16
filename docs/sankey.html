@@ -646,9 +646,13 @@
                 const rectY = (d.y1 - d.y0);
                 const rectX = (d.x1 - d.x0);
 
+                const oldY = d.y0;
+
                 // Constrain traversal to height
                 d.y0 = Math.max(0, Math.min(height - rectY, event.y));
                 d.y1 = d.y0 + rectY;
+
+                const dy = d.y0 - oldY;
 
                 // Allow Horizontal Dragging (constrained to width)
                 d.x0 = Math.max(0, Math.min(width - rectX, event.x));
@@ -656,12 +660,23 @@
 
                 d3.select(this).attr("transform", `translate(${d.x0},${d.y0})`);
 
-                // Update layout (recompute links) - Note: standard sankey.update() might reset X,
-                // so we strictly update the link paths manually here.
-                // sankey.update(graph); 
+                // Update connected links (vertical position)
+                // Source links (originating from this node) -> Update y0
+                const sourceLinks = graph.links.filter(l => l.source.index === d.index);
+                sourceLinks.forEach(l => {
+                    l.y0 += dy;
+                });
+
+                // Target links (ending at this node) -> Update y1
+                const targetLinks = graph.links.filter(l => l.target.index === d.index);
+                targetLinks.forEach(l => {
+                    l.y1 += dy;
+                });
 
                 // Redraw links
-                link.attr("d", d3.sankeyLinkHorizontal());
+                // Note: d3.sankeyLinkHorizontal uses d.source.x1, d.target.x0, d.y0, d.y1. 
+                // We updated d.source/d.target x-values (via d.x0/x1 references) and manually updated l.y0/l.y1.
+                svg.selectAll(".link").attr("d", d3.sankeyLinkHorizontal());
             }
 
             // Rects
@@ -671,7 +686,6 @@
                 .attr("fill", d => d.color);
 
             // Node Labels
-            // Node Labels
             const labels = node.append("text")
                 .style("font-size", "12px")
                 .style("fill", "#1e293b")
@@ -680,11 +694,14 @@
             labels.each(function (d) {
                 const el = d3.select(this);
                 const nodeWidth = d.x1 - d.x0;
+                const nodeHeight = d.y1 - d.y0;
+                const centerY = nodeHeight / 2;
 
                 if (d.type === "process") {
                     // Source Nodes: Label on Right
-                    el.attr("x", nodeWidth + 6)
-                        .attr("y", (d.y1 - d.y0) / 2)
+                    el.append("tspan")
+                        .attr("x", nodeWidth + 6)
+                        .attr("y", centerY)
                         .attr("dy", "0.35em")
                         .attr("text-anchor", "start")
                         .text(d.name);
@@ -694,9 +711,9 @@
                     // 1. Pathway Name on RIGHT
                     el.append("tspan")
                         .attr("x", nodeWidth + 6)
-                        .attr("y", (d.y1 - d.y0) / 2)
+                        .attr("y", centerY)
                         .attr("dy", "0.35em")
-                        .attr("text-anchor", "start") // Start of text is at x
+                        .attr("text-anchor", "start")
                         .style("font-weight", "bold")
                         .text(d.name);
 
@@ -709,19 +726,28 @@
                             chunks.push(geneList.slice(i, i + 3).join(", "));
                         }
 
-                        // Render chunks stacked
-                        // Center verticallish?
-                        const lineHeight = 1.1; // em
-                        const startDy = -((chunks.length - 1) * lineHeight) / 2 + 0.35; // Center block
+                        const lineHeight = 1.1; // em (approx 13px)
+                        // Vertical start calculation to center the block
+                        // Block height = chunks.length * lineHeight
+                        // Top of block relative to center = - (Block height / 2)
+                        // Add 0.35em for baseline correction
 
                         chunks.forEach((chunk, i) => {
+                            // Calculate explicit Y offset for each line to avoid overlap
+                            // Offset from center: (i - (total-1)/2) * lh
+                            // Convert to ems relative to centerY
+
                             el.append("tspan")
                                 .attr("x", -6)
-                                .attr("y", (d.y1 - d.y0) / 2)
-                                .attr("dy", i === 0 ? `${startDy}em` : `${lineHeight}em`)
-                                .attr("text-anchor", "end") // End of text is at x
+                                // Do NOT set 'y' here if using relative dy from previous, 
+                                // BUT mixing explicit y (for first line) and relative dy (for others) is safer 
+                                // if we handle it carefully.
+                                // SAFEST: Set explicit y for EVERY line.
+                                .attr("y", centerY)
+                                .attr("dy", `${(i - (chunks.length - 1) / 2) * lineHeight + 0.35}em`)
+                                .attr("text-anchor", "end")
                                 .style("font-weight", "bold")
-                                .style("fill", "#475569") // Slightly lighter for genes? Or keep dark? User's image looked dark.
+                                .style("fill", "#475569")
                                 .text(chunk);
                         });
                     }

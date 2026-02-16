@@ -131,6 +131,25 @@
             cursor: pointer;
         }
 
+        .btn {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            margin-bottom: 5px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-color: var(--accent-color);
+        }
+
         .chart-area {
             flex: 1;
             padding: 20px;
@@ -404,6 +423,12 @@
                 <div style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">
                     Cross-referencing genes with Reactome Primary Processes for manuscript validation.
                 </div>
+            </div>
+
+            <div class="control-group">
+                <label>Alignment</label>
+                <button class="btn" onclick="alignNodesVertically()">Align Vertically (Snap X)</button>
+                <button class="btn" onclick="distributeNodesVertically()">Distribute Vertically (Equal Gaps)</button>
             </div>
 
             <!-- Fold Change Mode Removed for 2-Column Layout -->
@@ -842,6 +867,94 @@
         }
 
         loadData();
+
+        // --- Alignment Functions ---
+
+function alignNodesVertically() {
+    const nodes = d3.selectAll(".node").data();
+
+    const processes = nodes.filter(n => n.type === 'process');
+    const pathways = nodes.filter(n => n.type === 'pathway');
+
+    [processes, pathways].forEach(group => {
+        if (group.length < 2) return;
+
+        // Find top-most node (min y0)
+        const topNode = group.reduce((prev, curr) => (prev.y0 < curr.y0) ? prev : curr);
+        const targetX0 = topNode.x0;
+        const width = topNode.x1 - topNode.x0; // Assuming uniform width
+
+        // Snap X
+        group.forEach(n => {
+            const oldX0 = n.x0;
+            const dx = targetX0 - oldX0;
+            if (dx === 0) return;
+
+            n.x0 = targetX0;
+            n.x1 = targetX0 + width;
+        });
+    });
+
+    // Re-render
+    redrawAfterUpdate();
+}
+
+function distributeNodesVertically() {
+    const nodes = d3.selectAll(".node").data();
+    const links = d3.selectAll(".link").data();
+
+    const processes = nodes.filter(n => n.type === 'process');
+    const pathways = nodes.filter(n => n.type === 'pathway');
+
+    [processes, pathways].forEach(group => {
+        if (group.length < 2) return;
+
+        // Sort by current Y position
+        group.sort((a, b) => a.y0 - b.y0);
+
+        const topY = group[0].y0;
+        const bottomY = group[group.length - 1].y1;
+        const totalSpan = bottomY - topY;
+
+        const totalNodeHeight = group.reduce((sum, n) => sum + (n.y1 - n.y0), 0);
+        const totalGapSpace = totalSpan - totalNodeHeight;
+
+        const gap = totalGapSpace / (group.length - 1);
+
+        let currentY = topY;
+        group.forEach(n => {
+            const h = n.y1 - n.y0;
+            const oldY0 = n.y0;
+
+            n.y0 = currentY;
+            n.y1 = currentY + h;
+
+            const dy = n.y0 - oldY0;
+
+            // Update links connected to this node
+            // Source links -> y0
+            const sourceLinks = links.filter(l => l.source.index === n.index);
+            sourceLinks.forEach(l => l.y0 += dy);
+
+            // Target links -> y1
+            const targetLinks = links.filter(l => l.target.index === n.index);
+            targetLinks.forEach(l => l.y1 += dy);
+
+            currentY += h + gap;
+        });
+    });
+
+    redrawAfterUpdate();
+}
+
+function redrawAfterUpdate() {
+    // Update Node Groups to new positions
+    const node = svg.selectAll(".node");
+    node.attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+    // Update Links
+    svg.selectAll(".link").attr("d", d3.sankeyLinkHorizontal());
+}
 
     </script>
 </body>

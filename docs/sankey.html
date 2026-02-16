@@ -942,12 +942,20 @@
                 group.sort((a, b) => a.y0 - b.y0);
 
                 let gap = 0;
-                const ecm = group.find(n => n.name === "ECM Remodeling & Invasion");
-                const tumour = group.find(n => n.name === "Tumour Adhesion & Migration");
+                let anchorA = null;
+                let anchorB = null;
 
-                if (ecm && tumour) {
-                    const nodeA = ecm.y0 < tumour.y0 ? ecm : tumour;
-                    const nodeB = ecm.y0 < tumour.y0 ? tumour : ecm;
+                if (group === processes) {
+                    anchorA = group.find(n => n.name === "ECM Remodeling & Invasion");
+                    anchorB = group.find(n => n.name === "Tumour Adhesion & Migration");
+                } else if (group === pathways) {
+                    anchorA = group.find(n => n.name === "FN1");
+                    anchorB = group.find(n => n.name === "ICAM");
+                }
+
+                if (anchorA && anchorB) {
+                    const nodeA = anchorA.y0 < anchorB.y0 ? anchorA : anchorB;
+                    const nodeB = anchorA.y0 < anchorB.y0 ? anchorB : anchorA;
                     gap = nodeB.y0 - nodeA.y1;
                 } else {
                     const topY = group[0].y0;

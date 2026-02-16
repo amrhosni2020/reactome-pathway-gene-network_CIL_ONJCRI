@@ -935,59 +935,62 @@
             const processes = nodes.filter(n => n.type === 'process');
             const pathways = nodes.filter(n => n.type === 'pathway');
 
-            [processes, pathways].forEach(group => {
-                if (group.length < 2) return;
-
-                // Sort by current Y position
-                group.sort((a, b) => a.y0 - b.y0);
+            // --- Phase 1: Distribute Pathways (Leader) ---
+            if (pathways.length >= 2) {
+                pathways.sort((a, b) => a.y0 - b.y0);
 
                 let gap = 0;
-                let anchorA = null;
-                let anchorB = null;
-
-                if (group === processes) {
-                    anchorA = group.find(n => n.name === "ECM Remodeling & Invasion");
-                    anchorB = group.find(n => n.name === "Tumour Adhesion & Migration");
-                } else if (group === pathways) {
-                    anchorA = group.find(n => n.name === "FN1");
-                    anchorB = group.find(n => n.name === "LAMININ");
-                }
+                const anchorA = pathways.find(n => n.name === "FN1");
+                const anchorB = pathways.find(n => n.name === "LAMININ");
 
                 if (anchorA && anchorB) {
                     const nodeA = anchorA.y0 < anchorB.y0 ? anchorA : anchorB;
                     const nodeB = anchorA.y0 < anchorB.y0 ? anchorB : anchorA;
                     gap = nodeB.y0 - nodeA.y1;
                 } else {
-                    const topY = group[0].y0;
-                    const bottomY = group[group.length - 1].y1;
+                    const topY = pathways[0].y0;
+                    const bottomY = pathways[pathways.length - 1].y1;
                     const totalSpan = bottomY - topY;
-                    const totalNodeHeight = group.reduce((sum, n) => sum + (n.y1 - n.y0), 0);
-                    const totalGapSpace = totalSpan - totalNodeHeight;
-                    gap = totalGapSpace / (group.length - 1);
+                    const totalNodeHeight = pathways.reduce((sum, n) => sum + (n.y1 - n.y0), 0);
+                    gap = (totalSpan - totalNodeHeight) / (pathways.length - 1);
                 }
 
-                let currentY = group[0].y0;
-                group.forEach(n => {
+                let currentY = pathways[0].y0;
+                pathways.forEach(n => {
                     const h = n.y1 - n.y0;
                     const oldY0 = n.y0;
-
                     n.y0 = currentY;
                     n.y1 = currentY + h;
-
                     const dy = n.y0 - oldY0;
-
-                    // Update links connected to this node
-                    // Source links -> y0
-                    const sourceLinks = links.filter(l => l.source.index === n.index);
-                    sourceLinks.forEach(l => l.y0 += dy);
-
-                    // Target links -> y1
-                    const targetLinks = links.filter(l => l.target.index === n.index);
-                    targetLinks.forEach(l => l.y1 += dy);
-
+                    links.filter(l => l.source.index === n.index).forEach(l => l.y0 += dy);
+                    links.filter(l => l.target.index === n.index).forEach(l => l.y1 += dy);
                     currentY += h + gap;
                 });
-            });
+            }
+
+            // --- Phase 2: Distribute Processes (Follower - Align to Pathways) ---
+            if (processes.length >= 2 && pathways.length >= 2) {
+                processes.sort((a, b) => a.y0 - b.y0);
+
+                const targetTop = pathways[0].y0;
+                const targetBottom = pathways[pathways.length - 1].y1;
+                const totalSpan = targetBottom - targetTop;
+
+                const totalNodeHeight = processes.reduce((sum, n) => sum + (n.y1 - n.y0), 0);
+                const gap = (totalSpan - totalNodeHeight) / (processes.length - 1);
+
+                let currentY = targetTop;
+                processes.forEach(n => {
+                    const h = n.y1 - n.y0;
+                    const oldY0 = n.y0;
+                    n.y0 = currentY;
+                    n.y1 = currentY + h;
+                    const dy = n.y0 - oldY0;
+                    links.filter(l => l.source.index === n.index).forEach(l => l.y0 += dy);
+                    links.filter(l => l.target.index === n.index).forEach(l => l.y1 += dy);
+                    currentY += h + gap;
+                });
+            }
 
             redrawAfterUpdate();
         }

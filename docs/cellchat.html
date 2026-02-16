@@ -15,43 +15,38 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #0f172a;
-            /* Slate 900 */
+            background: #f1f5f9;
+            /* Slate 100 */
             min-height: 100vh;
             padding: 20px;
-            color: #f1f5f9;
-            /* Slate 100 */
+            color: #1e293b;
+            /* Slate 900 */
         }
 
         .container {
             max-width: 1600px;
             margin: 0 auto;
-            background: #1e293b;
-            /* Slate 800 */
+            background: #ffffff;
+            /* White */
             border-radius: 12px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            border: 1px solid #334155;
+            border: 1px solid #cbd5e1;
         }
 
         header {
-            background: #1e293b;
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-            color: white;
+            background: #ffffff;
+            color: #1e293b;
             padding: 30px 40px;
             text-align: center;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #cbd5e1;
         }
 
         h1 {
             font-size: 2.2rem;
             font-weight: 700;
             margin-bottom: 8px;
-            background: linear-gradient(to right, #818cf8, #c084fc);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: #818cf8;
+            color: #1e293b;
             display: inline-block;
         }
 
@@ -59,13 +54,13 @@
             font-size: 1.05rem;
             opacity: 0.8;
             font-weight: 300;
-            color: #94a3b8;
+            color: #64748b;
         }
 
         .controls {
             padding: 25px 30px;
-            background: #1e293b;
-            border-bottom: 1px solid #334155;
+            background: #f8fafc;
+            border-bottom: 1px solid #cbd5e1;
             display: flex;
             gap: 25px;
             flex-wrap: wrap;
@@ -81,31 +76,31 @@
         .control-group label {
             font-size: 0.85rem;
             font-weight: 600;
-            color: #94a3b8;
+            color: #475569;
             letter-spacing: 0.025em;
         }
 
         select,
         input {
             padding: 10px 14px;
-            border: 1px solid #475569;
+            border: 1px solid #cbd5e1;
             border-radius: 6px;
             font-size: 0.9rem;
-            background: #0f172a;
-            color: #f1f5f9;
+            background: #ffffff;
+            color: #1e293b;
             transition: all 0.2s;
         }
 
         select:focus,
         input:focus {
             outline: none;
-            border-color: #818cf8;
-            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
         }
 
         .btn {
             padding: 10px 20px;
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            background: #2563eb;
             color: white;
             border: none;
             border-radius: 6px;
@@ -113,12 +108,12 @@
             cursor: pointer;
             transition: all 0.2s;
             font-size: 0.9rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
             filter: brightness(1.1);
         }
 
@@ -127,24 +122,24 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 25px;
             padding: 30px;
-            background: #0f172a;
+            background: #f1f5f9;
         }
 
         .waterfall-section {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 8px;
-            border: 1px solid #334155;
+            border: 1px solid #cbd5e1;
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .waterfall-title {
-            background: #1e293b;
+            background: #f8fafc;
             padding: 15px 20px;
             font-weight: 600;
             font-size: 1.05rem;
-            color: #f1f5f9;
-            border-bottom: 1px solid #334155;
+            color: #1e293b;
+            border-bottom: 1px solid #cbd5e1;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -152,8 +147,8 @@
 
         .pathway-count {
             font-size: 0.85rem;
-            color: #94a3b8;
-            background: #0f172a;
+            color: #475569;
+            background: #e2e8f0;
             padding: 4px 8px;
             border-radius: 4px;
         }
@@ -169,16 +164,16 @@
         }
 
         .waterfall-content::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: #f1f5f9;
         }
 
         .waterfall-content::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #cbd5e1;
             border-radius: 4px;
         }
 
         .waterfall-content::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            background: #94a3b8;
         }
 
         .bar {
@@ -188,7 +183,7 @@
 
         .bar:hover {
             opacity: 0.8;
-            stroke: #f1f5f9;
+            stroke: #334155;
             stroke-width: 1px;
         }
 
@@ -199,23 +194,23 @@
 
         .axis text {
             font-size: 11px;
-            fill: #94a3b8;
-            /* Slate 400 */
+            fill: #64748b;
+            /* Slate 500 */
         }
 
         .axis path,
         .axis line {
-            stroke: #475569;
+            stroke: #cbd5e1;
         }
 
         .axis-label {
             font-weight: 600;
             font-size: 12px;
-            fill: #cbd5e0;
+            fill: #64748b;
         }
 
         .zero-line {
-            stroke: #475569;
+            stroke: #cbd5e1;
             stroke-width: 2;
             stroke-dasharray: 4, 4;
         }
@@ -225,17 +220,17 @@
             align-items: center;
             gap: 20px;
             padding: 20px 30px;
-            background: #1e293b;
-            border-top: 1px solid #334155;
+            background: #f8fafc;
+            border-top: 1px solid #cbd5e1;
             flex-wrap: wrap;
-            color: #cbd5e0;
+            color: #475569;
         }
 
         .legend-title {
             font-weight: 600;
             margin-right: 10px;
             font-size: 0.95rem;
-            color: #f1f5f9;
+            color: #1e293b;
         }
 
         .legend-item {
@@ -254,10 +249,9 @@
         .tooltip {
             position: absolute;
             padding: 12px 16px;
-            background: rgba(15, 23, 42, 0.95);
-            /* Slate 900 */
-            color: #f1f5f9;
-            border: 1px solid #334155;
+            background: rgba(255, 255, 255, 0.95);
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
             border-radius: 6px;
             font-size: 0.85rem;
             pointer-events: none;
@@ -265,7 +259,7 @@
             transition: opacity 0.2s;
             z-index: 1000;
             max-width: 320px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             line-height: 1.5;
         }
 
@@ -277,7 +271,7 @@
             font-weight: 700;
             font-size: 0.95rem;
             margin-bottom: 8px;
-            color: #818cf8;
+            color: #2563eb;
         }
 
         .tooltip-row {
@@ -288,19 +282,19 @@
         }
 
         .tooltip-label {
-            color: #94a3b8;
+            color: #64748b;
         }
 
         .tooltip-value {
             font-weight: 600;
-            color: #f1f5f9;
+            color: #1e293b;
         }
 
         .loading {
             text-align: center;
             padding: 60px;
             font-size: 1.1rem;
-            color: #718096;
+            color: #64748b;
         }
 
         .value-display {
@@ -1098,7 +1092,8 @@
                     return change > 0 ? 'start' : 'end';
                 })
                 .style('font-size', '11px')
-                .style('fill', '#f1f5f9')
+                .style('font-size', '11px')
+                .style('fill', '#1e293b')
                 .style('font-weight', '600')
                 .text(d => {
                     const change = species === 'mouse' ? d.mouseChange : d.humanChange;
@@ -1111,7 +1106,7 @@
                 .attr('x2', x(0))
                 .attr('y1', 0)
                 .attr('y2', data.length * barHeight)
-                .attr('stroke', '#475569')
+                .attr('stroke', '#cbd5e1')
                 .attr('stroke-width', 2);
 
             // X-axis
@@ -1194,7 +1189,7 @@
                 .attr('x', 20)
                 .attr('y', 12)
                 .style('font-size', '13px')
-                .style('fill', '#f1f5f9')
+                .style('fill', '#1e293b')
                 .text('Human (LM vs AN)');
 
             legend.append('rect')
@@ -1209,7 +1204,7 @@
                 .attr('x', 200)
                 .attr('y', 12)
                 .style('font-size', '13px')
-                .style('fill', '#f1f5f9')
+                .style('fill', '#1e293b')
                 .text('Mouse (sgp130 vs WT)');
 
             // Mouse bars (top bar in each group)
@@ -1255,7 +1250,7 @@
                 .attr('dy', '0.35em')
                 .attr('text-anchor', 'end')
                 .style('font-size', '11px')
-                .style('fill', '#f1f5f9')
+                .style('fill', '#1e293b')
                 .style('font-weight', '500')
                 .text(d => d.pathway);
 
@@ -1270,7 +1265,7 @@
                 .attr('dy', '0.35em')
                 .attr('text-anchor', d => d.mouseChange > 0 ? 'start' : 'end')
                 .style('font-size', '10px')
-                .style('fill', '#f1f5f9')
+                .style('fill', '#1e293b')
                 .style('font-weight', '600')
                 .text(d => (d.mouseChange > 0 ? '+' : '') + d.mouseChange.toFixed(1) + '%');
 
@@ -1285,7 +1280,7 @@
                 .attr('dy', '0.35em')
                 .attr('text-anchor', d => d.humanChange > 0 ? 'start' : 'end')
                 .style('font-size', '10px')
-                .style('fill', '#f1f5f9')
+                .style('fill', '#1e293b')
                 .style('font-weight', '600')
                 .text(d => (d.humanChange > 0 ? '+' : '') + d.humanChange.toFixed(1) + '%');
 
@@ -1295,7 +1290,7 @@
                 .attr('x2', x(0))
                 .attr('y1', 0)
                 .attr('y2', data.length * groupHeight)
-                .attr('stroke', '#475569')
+                .attr('stroke', '#cbd5e1')
                 .attr('stroke-width', 2);
 
             // X-axis
@@ -1432,7 +1427,7 @@
                     xScale(d.percentChange) + 5 : xScale(d.percentChange) - 5)
                 .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 4)
                 .attr('text-anchor', d => d.percentChange > 0 ? 'start' : 'end')
-                .attr('fill', '#f1f5f9') // Light text for dark theme
+                .attr('fill', '#1e293b') // Dark text for light theme
                 .style('font-weight', '600')
                 .text(d => `${d.percentChange > 0 ? '+' : ''}${d.percentChange.toFixed(1)}%`);
 
@@ -1446,7 +1441,7 @@
                 .attr('y', d => yScale(d.pathway) + yScale.bandwidth() / 2 + 3)
                 .attr('text-anchor', 'end')
                 .text(d => d.pathway)
-                .style('fill', '#cbd5e0') // Light text for dark theme
+                .style('fill', '#475569') // Dark text for light theme
                 .style('font-size', '10px')
                 .style('cursor', 'pointer')
                 .on('click', (event, d) => selectPathway(d.pathway));

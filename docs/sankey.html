@@ -941,16 +941,24 @@
                 // Sort by current Y position
                 group.sort((a, b) => a.y0 - b.y0);
 
-                const topY = group[0].y0;
-                const bottomY = group[group.length - 1].y1;
-                const totalSpan = bottomY - topY;
+                let gap = 0;
+                const ecm = group.find(n => n.name === "ECM Remodeling & Invasion");
+                const tumour = group.find(n => n.name === "Tumour Adhesion & Migration");
 
-                const totalNodeHeight = group.reduce((sum, n) => sum + (n.y1 - n.y0), 0);
-                const totalGapSpace = totalSpan - totalNodeHeight;
+                if (ecm && tumour) {
+                    const nodeA = ecm.y0 < tumour.y0 ? ecm : tumour;
+                    const nodeB = ecm.y0 < tumour.y0 ? tumour : ecm;
+                    gap = nodeB.y0 - nodeA.y1;
+                } else {
+                    const topY = group[0].y0;
+                    const bottomY = group[group.length - 1].y1;
+                    const totalSpan = bottomY - topY;
+                    const totalNodeHeight = group.reduce((sum, n) => sum + (n.y1 - n.y0), 0);
+                    const totalGapSpace = totalSpan - totalNodeHeight;
+                    gap = totalGapSpace / (group.length - 1);
+                }
 
-                const gap = totalGapSpace / (group.length - 1);
-
-                let currentY = topY;
+                let currentY = group[0].y0;
                 group.forEach(n => {
                     const h = n.y1 - n.y0;
                     const oldY0 = n.y0;
